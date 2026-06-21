@@ -47,6 +47,13 @@ class GenerateLookupRequest(BaseModel):
     hierarchical: bool = False
 
 
+class UpdateItemRequest(BaseModel):
+    label: dict[str, str] | None = None
+    parent_value_key: str | None = None
+    sort_order: int | None = None
+    is_active: bool | None = None
+
+
 def _item_dict(i: LookupItem) -> dict:
     return {
         "value_key": i.value_key,
@@ -210,3 +217,52 @@ async def add_items(
             added += 1
     await session.commit()
     return {"key": key, "added": added, "updated": updated}
+
+
+async def _get_item(session: AsyncSession, key: str, value_key: str) -> LookupItem:
+    item = (
+        await session.execute(
+            select(LookupItem).where(LookupItem.list_key == key, LookupItem.value_key == value_key)
+        )
+    ).scalar_one_or_none()
+    if not item:
+        raise HTTPException(status_code=404, detail="العنصر غير موجود")
+    return item
+
+
+@router.patch("/{key}/items/{value_key}")
+async def update_item(
+    key: str,
+    value_key: str,
+    req: UpdateItemRequest,
+    session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("lookups:write")),
+) -> dict:
+    """تعديل عنصر واحد (عرض/أب/ترتيب/تفعيل) مع ختم المراجعة."""
+    item = await _get_item(session, key, value_key)
+    if req.label is not None:
+        item.label = req.label
+    if req.parent_value_key is not None:
+        item.parent_value_key = req.parent_value_key or None
+    if req.sort_order is not None:
+        item.sort_order = req.sort_order
+    if req.is_active is not None:
+        item.is_active = req.is_active
+    item.reviewed_by = user.username
+    item.reviewed_at = datetime.datetime.now(datetime.timezone.utc)
+    await session.commit()
+    return {"updated": value_key}
+
+
+@router.delete("/{key}/items/{value_key}")
+async def delete_item(
+    key: str,
+    value_key: str,
+    session: AsyncSession = Depends(get_session),
+    _user: User = Depends(require_permission("lookups:write")),
+) -> dict:
+    """حذف ناعم لعنصر واحد (لا يُيتّم الإجابات التي تخزّن value_key)."""
+    item = await _get_item(session, key, value_key)
+    item.is_active = False
+    await session.commit()
+    return {"deactivated": value_key}

@@ -6,16 +6,20 @@ import { can, getUser, onAuthChange, type SessionUser } from "@/lib/auth";
 import {
   addLookupItems,
   createLookupList,
+  deleteLookupItem,
   deleteLookupList,
   deleteUser,
   generateLookup,
+  getLookup,
   getLookups,
   importLookupExcel,
+  updateLookupItem,
   listRoles,
   listUsers,
   registerUser,
   updateUser,
   type AdminUser,
+  type LookupItem,
   type ProposedLookupItem,
   type RoleInfo,
 } from "@/lib/api";
@@ -165,6 +169,9 @@ function LookupsSection() {
   const [tlabel, setTlabel] = useState("");
   const [warnings, setWarnings] = useState<string[]>([]);
   const [xlBusy, setXlBusy] = useState(false);
+  // تحرير عناصر قائمة موجودة
+  const [expandedKey, setExpandedKey] = useState<string | null>(null);
+  const [items, setItems] = useState<LookupItem[]>([]);
 
   const reload = useCallback(() => {
     getLookups().then(setLists).catch((e) => setMsg({ t: e.message, ok: false }));
@@ -173,6 +180,19 @@ function LookupsSection() {
 
   const guard = (p: Promise<unknown>) =>
     p.then(() => { setMsg(null); reload(); }).catch((e) => setMsg({ t: e.message, ok: false }));
+
+  const refreshItems = (key: string) => getLookup(key).then((r) => setItems(r.items)).catch(() => {});
+  async function toggleItems(key: string) {
+    if (expandedKey === key) { setExpandedKey(null); return; }
+    try { const r = await getLookup(key); setItems(r.items); setExpandedKey(key); }
+    catch (e: any) { setMsg({ t: e.message, ok: false }); }
+  }
+  function editItem(key: string, vk: string, patch: { label?: { ar?: string; en?: string }; parent_value_key?: string | null }) {
+    updateLookupItem(key, vk, patch).then(() => refreshItems(key)).catch((e) => setMsg({ t: e.message, ok: false }));
+  }
+  function delItem(key: string, vk: string) {
+    deleteLookupItem(key, vk).then(() => { refreshItems(key); reload(); }).catch((e) => setMsg({ t: e.message, ok: false }));
+  }
 
   function addList() {
     if (!nkey.trim()) return;
@@ -319,9 +339,33 @@ function LookupsSection() {
       </div>
 
       {lists.map((l) => (
-        <div className="row mini" key={l.key} style={{ justifyContent: "space-between", borderTop: "1px solid var(--border)", paddingTop: 6 }}>
-          <span><strong>{l.label?.ar || l.key}</strong> <span className="muted sm">({l.key} · {l.item_count} عنصر)</span></span>
-          <button className="del-btn" onClick={() => guard(deleteLookupList(l.key))}>حذف القائمة</button>
+        <div key={l.key} style={{ borderTop: "1px solid var(--border)", paddingTop: 6, marginTop: 6 }}>
+          <div className="row mini" style={{ justifyContent: "space-between" }}>
+            <span><strong>{l.label?.ar || l.key}</strong> <span className="muted sm">({l.key} · {l.item_count} عنصر)</span></span>
+            <div className="row mini">
+              <button className="add-btn" onClick={() => toggleItems(l.key)}>{expandedKey === l.key ? "إخفاء" : "عرض/تحرير العناصر"}</button>
+              <button className="del-btn" onClick={() => guard(deleteLookupList(l.key))}>حذف القائمة</button>
+            </div>
+          </div>
+          {expandedKey === l.key && (
+            <div className="tbl-wrap" style={{ marginTop: 6, marginBottom: 8 }}>
+              <table className="tbl">
+                <thead><tr><th>value_key</th><th>العرض (عربي)</th><th>الأب</th><th>الإسناد</th><th className="tbl-x"></th></tr></thead>
+                <tbody>
+                  {items.map((it) => (
+                    <tr key={it.value_key}>
+                      <td className="muted sm">{it.value_key}</td>
+                      <td><input key={`ar-${it.value_key}`} defaultValue={it.label?.ar ?? ""} onBlur={(e) => editItem(l.key, it.value_key, { label: { ...(it.label || {}), ar: e.target.value } })} /></td>
+                      <td><input key={`p-${it.value_key}`} defaultValue={it.parent_value_key ?? ""} onBlur={(e) => editItem(l.key, it.value_key, { parent_value_key: e.target.value })} placeholder="—" /></td>
+                      <td className="muted sm">{it.source}{it.reviewed_by ? ` · راجعه ${it.reviewed_by}` : ""}</td>
+                      <td className="tbl-x"><button className="del-btn" onClick={() => delItem(l.key, it.value_key)}>✕</button></td>
+                    </tr>
+                  ))}
+                  {items.length === 0 && <tr><td colSpan={5} className="tbl-empty">لا عناصر</td></tr>}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       ))}
     </div>

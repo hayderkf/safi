@@ -81,6 +81,7 @@ export interface LookupItem {
   source?: string;
   confidence?: number;
   version?: number;
+  reviewed_by?: string | null;
 }
 
 export async function getLookup(
@@ -140,6 +141,14 @@ export const addLookupItems = (key: string, items: ProposedLookupItem[]): Promis
   jpost(`/lookups/${encodeURIComponent(key)}/items`, { items });
 export const deleteLookupList = (key: string): Promise<unknown> =>
   jsend("DELETE", `/lookups/${encodeURIComponent(key)}`);
+export const updateLookupItem = (
+  key: string,
+  valueKey: string,
+  patch: { label?: Translations; parent_value_key?: string | null; sort_order?: number; is_active?: boolean }
+): Promise<unknown> =>
+  jsend("PATCH", `/lookups/${encodeURIComponent(key)}/items/${encodeURIComponent(valueKey)}`, patch);
+export const deleteLookupItem = (key: string, valueKey: string): Promise<unknown> =>
+  jsend("DELETE", `/lookups/${encodeURIComponent(key)}/items/${encodeURIComponent(valueKey)}`);
 export const generateLookup = (
   description: string,
   hierarchical: boolean
