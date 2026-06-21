@@ -1,10 +1,14 @@
 "use client";
-// مُصيِّر الاستمارة الديناميكي: يبني الواجهة من مخطط IR + يقيّم المنطق الشرطي (نسخة v1).
-import type { FormField, Option, Values } from "@/lib/types";
+// مُصيِّر الاستمارة الديناميكي: يبني الواجهة من مخطط IR + يقيّم المنطق الشرطي.
+// يدعم: الحقول الأساسية + الاختيار + المجموعات (صفحة/متكرّر حقيقي) + جدول + مصفوفة
+// + range/rate/file/image/signature/map/qrcode. النطاقات المتداخلة عبر تمرير values/onChange محليّين.
+import type { Column, FormField, MatrixRow, Option, Values } from "@/lib/types";
 import { label } from "@/lib/types";
 import { isRequired, isVisible } from "@/lib/rules";
+import SignaturePad from "@/components/SignaturePad";
 
 const optLabel = (o: Option) => o.valueTranslations?.ar || o.valueTranslations?.en || o.valueKey;
+const colLabel = (c: Column | MatrixRow) => c.labelTranslations?.ar || c.labelTranslations?.en || c.key;
 
 interface Props {
   fields: FormField[];
@@ -37,14 +41,14 @@ function FieldView({
   const req = isRequired(f, values);
   const v = values[f.id];
 
-  // حاوية (مجموعة / صفحة / متكرّر)
+  // حاوية (مجموعة / صفحة / متكرّر حقيقي)
   if (f.type === "groupField") {
+    if (f.isRepeating) return <RepeatingGroup f={f} v={v} onChange={onChange} lab={lab} />;
     return (
       <div className="group">
         <div className="gtitle">
           {lab}
           {f.layout === "step" && <span className="step-badge">صفحة</span>}
-          {f.isRepeating && <span className="step-badge">متكرّر</span>}
         </div>
         {(f.subFields || []).map((sf) => (
           <FieldView key={sf.id} f={sf} values={values} onChange={onChange} />
@@ -74,7 +78,11 @@ function FieldView({
       return (
         <div className="field">
           <Lbl />
-          <input value={(v as string) ?? ""} onChange={(e) => onChange(f.id, e.target.value)} />
+          <input
+            value={(v as string) ?? ""}
+            placeholder={f.placeholder}
+            onChange={(e) => onChange(f.id, e.target.value)}
+          />
         </div>
       );
 
@@ -86,7 +94,9 @@ function FieldView({
           <Lbl />
           <input
             type="number"
+            step={f.type === "integerField" ? 1 : "any"}
             value={(v as number) ?? ""}
+            placeholder={f.placeholder}
             onChange={(e) => onChange(f.id, e.target.value === "" ? null : Number(e.target.value))}
           />
         </div>
@@ -152,6 +162,126 @@ function FieldView({
       );
     }
 
+    case "rangeField": {
+      const min = f.min ?? 0;
+      const max = f.max ?? 100;
+      const step = f.step ?? 1;
+      const cur = typeof v === "number" ? v : min;
+      return (
+        <div className="field">
+          <Lbl />
+          <div className="range-row">
+            <input
+              type="range"
+              min={min}
+              max={max}
+              step={step}
+              value={cur}
+              onChange={(e) => onChange(f.id, Number(e.target.value))}
+            />
+            <span className="range-val">{cur}</span>
+          </div>
+        </div>
+      );
+    }
+
+    case "rateField": {
+      const maxR = f.maxRating ?? f.max ?? 5;
+      const cur = typeof v === "number" ? v : 0;
+      return (
+        <div className="field">
+          <Lbl />
+          <div className="stars">
+            {Array.from({ length: maxR }, (_, i) => i + 1).map((n) => (
+              <button
+                key={n}
+                type="button"
+                className={`star${n <= cur ? " on" : ""}`}
+                onClick={() => onChange(f.id, n === cur ? 0 : n)}
+                aria-label={`${n}`}
+              >
+                ★
+              </button>
+            ))}
+          </div>
+        </div>
+      );
+    }
+
+    case "fileField":
+    case "imageField":
+    case "audioField":
+    case "videoField": {
+      const accept =
+        f.type === "imageField" ? "image/*" : f.type === "audioField" ? "audio/*" : f.type === "videoField" ? "video/*" : undefined;
+      const meta = v as { name?: string; size?: number } | undefined;
+      return (
+        <div className="field">
+          <Lbl />
+          <input
+            type="file"
+            accept={accept}
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              onChange(f.id, file ? { name: file.name, size: file.size, type: file.type } : null);
+            }}
+          />
+          {meta?.name && (
+            <div className="filehint">
+              {meta.name} ({Math.round((meta.size ?? 0) / 1024)} ك.ب) — الرفع الفعلي لاحقاً (تخزين الكائنات)
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    case "signatureField":
+      return (
+        <div className="field">
+          <Lbl />
+          <SignaturePad value={v as string | undefined} onChange={(d) => onChange(f.id, d)} />
+        </div>
+      );
+
+    case "mapField": {
+      const pt = (v as { lat?: number; lng?: number }) ?? {};
+      const set = (k: "lat" | "lng", val: string) => onChange(f.id, { ...pt, [k]: val === "" ? null : Number(val) });
+      const locate = () => {
+        if (!navigator.geolocation) return;
+        navigator.geolocation.getCurrentPosition((p) =>
+          onChange(f.id, { lat: p.coords.latitude, lng: p.coords.longitude })
+        );
+      };
+      return (
+        <div className="field">
+          <Lbl />
+          <div className="map-row">
+            <input type="number" step="any" placeholder="خط العرض (lat)" value={pt.lat ?? ""} onChange={(e) => set("lat", e.target.value)} />
+            <input type="number" step="any" placeholder="خط الطول (lng)" value={pt.lng ?? ""} onChange={(e) => set("lng", e.target.value)} />
+            <button type="button" className="add-btn" onClick={locate}>📍 موقعي</button>
+          </div>
+        </div>
+      );
+    }
+
+    case "qrcodeField":
+      return (
+        <div className="field">
+          <Lbl />
+          <input
+            value={(v as string) ?? ""}
+            placeholder="أدخل الرمز يدوياً (المسح بالكاميرا لاحقاً)"
+            onChange={(e) => onChange(f.id, e.target.value)}
+          />
+        </div>
+      );
+
+    case "tableField":
+      return <TableField f={f} v={v} onChange={onChange} lab={lab} req={req} />;
+
+    case "matrixField":
+      return <MatrixField f={f} v={v} onChange={onChange} lab={lab} req={req} />;
+
     default:
       return (
         <div className="field">
@@ -160,4 +290,208 @@ function FieldView({
         </div>
       );
   }
+}
+
+// ---- قسم متكرّر حقيقي: القيمة مصفوفة نطاقات؛ كل عنصر يعرض subFields في نطاقه ----
+function RepeatingGroup({
+  f,
+  v,
+  onChange,
+  lab,
+}: {
+  f: FormField;
+  v: unknown;
+  onChange: (id: string, v: unknown) => void;
+  lab: string;
+}) {
+  const rows: Values[] = Array.isArray(v) ? (v as Values[]) : [];
+  const setRows = (next: Values[]) => onChange(f.id, next);
+  const add = () => setRows([...rows, {}]);
+  const remove = (i: number) => setRows(rows.filter((_, idx) => idx !== i));
+  const updateRow = (i: number, sid: string, sv: unknown) =>
+    setRows(rows.map((r, idx) => (idx === i ? { ...r, [sid]: sv } : r)));
+
+  return (
+    <div className="group repeating">
+      <div className="gtitle">
+        {lab}
+        <span className="step-badge">متكرّر</span>
+      </div>
+      {rows.map((row, i) => (
+        <div className="repeat-item" key={i}>
+          <div className="repeat-head">
+            <span>#{i + 1}</span>
+            <button type="button" className="del-btn" onClick={() => remove(i)}>
+              حذف
+            </button>
+          </div>
+          {(f.subFields || []).map((sf) => (
+            <FieldView key={sf.id} f={sf} values={row} onChange={(sid, sv) => updateRow(i, sid, sv)} />
+          ))}
+        </div>
+      ))}
+      <button type="button" className="add-btn" onClick={add}>
+        + إضافة
+      </button>
+    </div>
+  );
+}
+
+// ---- جدول: القيمة مصفوفة صفوف؛ كل صف كائن مفاتيحه أعمدة ----
+function TableField({
+  f,
+  v,
+  onChange,
+  lab,
+  req,
+}: {
+  f: FormField;
+  v: unknown;
+  onChange: (id: string, v: unknown) => void;
+  lab: string;
+  req: boolean;
+}) {
+  const cols = f.columns || [];
+  const rows: Values[] = Array.isArray(v) ? (v as Values[]) : [];
+  const setRows = (next: Values[]) => onChange(f.id, next);
+  const add = () => setRows([...rows, {}]);
+  const remove = (i: number) => setRows(rows.filter((_, idx) => idx !== i));
+  const setCell = (i: number, key: string, val: unknown) =>
+    setRows(rows.map((r, idx) => (idx === i ? { ...r, [key]: val } : r)));
+
+  const cellType = (t?: string) =>
+    t === "integerField" || t === "doubleField" || t === "numberField"
+      ? "number"
+      : t === "dateField"
+      ? "date"
+      : "text";
+
+  return (
+    <div className="field">
+      <label>
+        {lab}
+        {req && <span className="req"> *</span>}
+      </label>
+      <div className="tbl-wrap">
+        <table className="tbl">
+          <thead>
+            <tr>
+              {cols.map((c) => (
+                <th key={c.key}>{colLabel(c)}</th>
+              ))}
+              <th className="tbl-x"></th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row, i) => (
+              <tr key={i}>
+                {cols.map((c) => (
+                  <td key={c.key}>
+                    <input
+                      type={cellType(c.type)}
+                      value={(row[c.key] as string | number) ?? ""}
+                      onChange={(e) =>
+                        setCell(i, c.key, cellType(c.type) === "number" && e.target.value !== "" ? Number(e.target.value) : e.target.value)
+                      }
+                    />
+                  </td>
+                ))}
+                <td className="tbl-x">
+                  <button type="button" className="del-btn" onClick={() => remove(i)}>
+                    ✕
+                  </button>
+                </td>
+              </tr>
+            ))}
+            {rows.length === 0 && (
+              <tr>
+                <td colSpan={cols.length + 1} className="tbl-empty">
+                  لا صفوف بعد
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+      <button type="button" className="add-btn" onClick={add}>
+        + صفّ
+      </button>
+    </div>
+  );
+}
+
+// ---- مصفوفة: صفوف × خيارات (مقياس)؛ single → اختيار واحد لكل صفّ، multiple → متعدّد ----
+function MatrixField({
+  f,
+  v,
+  onChange,
+  lab,
+  req,
+}: {
+  f: FormField;
+  v: unknown;
+  onChange: (id: string, v: unknown) => void;
+  lab: string;
+  req: boolean;
+}) {
+  const rows = f.matrixRows || [];
+  const opts = f.options || [];
+  const multiple = f.matrixMode === "multiple";
+  const ans = (v as Record<string, unknown>) ?? {};
+
+  const setSingle = (rk: string, ok: string) => onChange(f.id, { ...ans, [rk]: ok });
+  const toggleMulti = (rk: string, ok: string) => {
+    const cur = Array.isArray(ans[rk]) ? (ans[rk] as string[]) : [];
+    const next = cur.includes(ok) ? cur.filter((x) => x !== ok) : [...cur, ok];
+    onChange(f.id, { ...ans, [rk]: next });
+  };
+
+  return (
+    <div className="field">
+      <label>
+        {lab}
+        {req && <span className="req"> *</span>}
+      </label>
+      <div className="tbl-wrap">
+        <table className="tbl matrix">
+          <thead>
+            <tr>
+              <th></th>
+              {opts.map((o) => (
+                <th key={o.valueKey}>{optLabel(o)}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((r) => {
+              const cur = ans[r.key];
+              return (
+                <tr key={r.key}>
+                  <td className="matrix-rowlabel">{colLabel(r)}</td>
+                  {opts.map((o) => (
+                    <td key={o.valueKey} className="matrix-cell">
+                      {multiple ? (
+                        <input
+                          type="checkbox"
+                          checked={Array.isArray(cur) && (cur as string[]).includes(o.valueKey)}
+                          onChange={() => toggleMulti(r.key, o.valueKey)}
+                        />
+                      ) : (
+                        <input
+                          type="radio"
+                          name={`${f.id}__${r.key}`}
+                          checked={cur === o.valueKey}
+                          onChange={() => setSingle(r.key, o.valueKey)}
+                        />
+                      )}
+                    </td>
+                  ))}
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
 }

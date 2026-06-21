@@ -1,6 +1,6 @@
 # STATUS — حالة المشروع الحالية (نقطة التسليم)
 
-> آخر تحديث: 2026-06-20 · هذه الوثيقة تخبر أي وكيل (Claude Code) **أين توقّفنا وما التالي**. اقرأ `CLAUDE.md` و`docs/BUILD_PLAN.md` و`docs/IR_SCHEMA.md` معها.
+> آخر تحديث: 2026-06-21 · هذه الوثيقة تخبر أي وكيل (Claude Code) **أين توقّفنا وما التالي**. اقرأ `CLAUDE.md` و`docs/BUILD_PLAN.md` و`docs/IR_SCHEMA.md` معها.
 
 ## ما يعمل الآن ✅ (المراحل 0–3 منجزة، الواجهة v1)
 - **الباك إند (FastAPI، 8601):**
@@ -9,7 +9,7 @@
   - `POST /forms/{id}/submissions`, `GET /forms/{id}/submissions` — الإجابات.
   - الجداول تُنشأ تلقائياً عند الإقلاع (`init_db`). قاعدة البيانات: `safi`.
 - **الواجهة (Next.js، 3601):** صفحة تولّد استمارة، تعرضها كنموذج حيّ (RTL)، تعبّئها وتحفظها.
-  - المُصيِّر يدعم: text, integer, double, date, datetime, time, dropdown, radio, checkbox, note, groupField + **المنطق الشرطي (visibilityWhen)**.
+  - المُصيِّر يدعم **مجموعة الأنواع الكاملة**: text, integer/double/number, date/datetime/time, dropdown, radio, checkbox, note + range, rate, file/image/audio/video, signature (canvas), map (lat/lng + تحديد الموقع), qrcode + **جدول** (`tableField` صفوف ديناميكية بأعمدة مُنمّطة) + **مصفوفة** (`matrixField` single/multiple) + **التكرار الحقيقي** (`groupField isRepeating` كمصفوفة نطاقات بإضافة/حذف) + **المنطق الشرطي** (`visibilityWhen`/`requiredWhen`).
 
 ## التشغيل
 - `bash ~/Documents/Safi/start.sh` (تشغيل) · `bash ~/Documents/Safi/stop.sh` (إيقاف).
@@ -22,8 +22,8 @@
 - `ai/poc/` نتائج إثبات المفهوم (مرجع).
 
 ## التالي (اختر من BUILD_PLAN)
-- **توسعة المُصيِّر:** map, signature, file/image, matrix, table, و**التكرار الحقيقي** (groupField isRepeating بقيم مصفوفية).
-- **الإسناد للبيانات الساندة (المرحلة ٤):** جداول قوائم ساندة + ربط حقول الاختيار (`dataSourceKey`) ببيانات حقيقية بدل الخيارات النائبة.
+- ✅ **توسعة المُصيِّر — منجز** (range/rate/file/image/signature/map/qrcode + جدول + مصفوفة + التكرار الحقيقي). فرع `feat/renderer-expansion`.
+- **الإسناد للبيانات الساندة (المرحلة ٤) — التالي:** جداول قوائم ساندة (هرمية/متتالية) + ربط حقول الاختيار (`dataSourceKey`/`displayField`/`valueField`/`parentFieldId`) ببيانات حقيقية بدل الخيارات النائبة. (يجسّد مبدأ الإسناد: النظام لا يهلوس القيم.)
 - **الباني المرئي للاستمارات:** محرّر سحب وإفلات (الويب) لتحرير الـ IR يدوياً.
 - **المرحلة ٥:** الهوية والصلاحيات (RBAC) وسير المراجعة.
 

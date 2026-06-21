@@ -41,6 +41,12 @@ export interface FormField {
   columns?: Column[];
   matrixRows?: MatrixRow[];
   matrixMode?: string;
+  // خصائص عرض اختيارية (يسمح بها العقد عبر extra="allow")
+  min?: number;
+  max?: number;
+  step?: number;
+  maxRating?: number;
+  placeholder?: string;
   visibilityWhen?: RuleGroup;
   requiredWhen?: RuleGroup;
   enabledWhen?: RuleGroup;
