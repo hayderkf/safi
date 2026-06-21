@@ -4,6 +4,7 @@ from pydantic import BaseModel, Field
 
 from ..auth.deps import require_permission
 from ..db.models import User
+from ..forms.describe import describe_form
 from ..forms.generate import generate_form
 
 router = APIRouter(prefix="/forms", tags=["forms"])
@@ -14,6 +15,11 @@ class GenerateRequest(BaseModel):
     lang: str = "ar"
 
 
+class DescribeRequest(BaseModel):
+    ir: list = Field(default_factory=list, description="مخطط الاستمارة (مصفوفة الحقول)")
+    lang: str = "ar"
+
+
 @router.post("/generate")
 async def generate(
     req: GenerateRequest,
@@ -21,3 +27,12 @@ async def generate(
 ) -> dict:
     """وصف عربي → مخطط استمارة (IR) متحقَّق منه."""
     return await generate_form(req.prompt, req.lang)
+
+
+@router.post("/describe")
+async def describe(
+    req: DescribeRequest,
+    _user: User = Depends(require_permission("forms:generate")),
+) -> dict:
+    """عكس التوليد: مخطط استمارة (IR) → وصف لغوي طبيعي بالعربية."""
+    return await describe_form(req.ir, req.lang)

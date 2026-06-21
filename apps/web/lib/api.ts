@@ -53,6 +53,10 @@ export async function generateForm(prompt: string): Promise<{ ok: boolean; field
   return jpost("/forms/generate", { prompt });
 }
 
+export async function describeForm(ir: FormField[]): Promise<{ ok: boolean; description: string; meta: any }> {
+  return jpost("/forms/describe", { ir });
+}
+
 export async function saveForm(title: string, ir: FormField[], source_prompt = ""): Promise<{ id: string }> {
   return jpost("/forms", { title, ir, source_prompt });
 }

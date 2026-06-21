@@ -6,7 +6,7 @@ import type { Column, FormField, Option, RuleGroup, Values } from "@/lib/types";
 import { label } from "@/lib/types";
 import FormRenderer from "@/components/FormRenderer";
 import AuthBar from "@/components/AuthBar";
-import { generateForm, getLookups, getForm, listForms, saveForm } from "@/lib/api";
+import { describeForm, generateForm, getLookups, getForm, listForms, saveForm } from "@/lib/api";
 import {
   CHOICE_TYPES,
   OPERATORS,
@@ -33,6 +33,8 @@ export default function BuilderPage() {
   const [aiPrompt, setAiPrompt] = useState("");
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ t: string; ok: boolean } | null>(null);
+  const [desc, setDesc] = useState<string | null>(null);
+  const [descBusy, setDescBusy] = useState(false);
 
   useEffect(() => {
     getLookups().then(setLookups).catch(() => setLookups([]));
@@ -97,6 +99,20 @@ export default function BuilderPage() {
     }
   }
 
+  async function describe() {
+    if (!fields.length) return;
+    setDescBusy(true);
+    setMsg(null);
+    try {
+      const r = await describeForm(fields);
+      setDesc(r.description || "(وصف فارغ)");
+    } catch (e: any) {
+      setMsg({ t: e.message, ok: false });
+    } finally {
+      setDescBusy(false);
+    }
+  }
+
   async function save() {
     setBusy(true);
     setMsg(null);
@@ -125,6 +141,9 @@ export default function BuilderPage() {
         <div className="row">
           <input style={{ flex: 1, minWidth: 180 }} value={title} onChange={(e) => setTitle(e.target.value)} placeholder="عنوان الاستمارة" />
           <button onClick={save} disabled={busy || !fields.length}>حفظ</button>
+          <button className="add-btn" onClick={describe} disabled={descBusy || !fields.length} title="تحويل الاستمارة إلى وصف لغوي يفهمه النموذج">
+            {descBusy ? "…جارٍ" : "تخريج وصف"}
+          </button>
           {msg && <span className={msg.ok ? "msg-ok" : "msg-err"}>{msg.t}</span>}
         </div>
         <div className="row" style={{ marginTop: 10 }}>
@@ -143,6 +162,20 @@ export default function BuilderPage() {
           </div>
         )}
       </div>
+
+      {desc !== null && (
+        <div className="card">
+          <div className="row" style={{ justifyContent: "space-between", marginBottom: 8 }}>
+            <strong>وصف الاستمارة (كما يفهمه النموذج)</strong>
+            <div className="row">
+              <button type="button" className="add-btn" onClick={() => navigator.clipboard?.writeText(desc)}>نسخ</button>
+              <button type="button" className="del-btn" onClick={() => setDesc(null)}>إغلاق</button>
+            </div>
+          </div>
+          <textarea readOnly value={desc} style={{ minHeight: 140, width: "100%" }} />
+          <div className="meta">يمكنك لصق هذا الوصف في صفحة التوليد لإعادة إنشاء استمارة مماثلة.</div>
+        </div>
+      )}
 
       <div className="builder-grid">
         {/* اللوحة + قائمة الحقول */}
