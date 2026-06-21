@@ -42,6 +42,19 @@ button:disabled { opacity: .55; cursor: default; }
 .issues { background: #faece7; border: 1px solid #f0d0c4; color: #993c1d; font-size: 13px; margin-top: 12px; }
 .issues ul { margin: 6px 0 0; padding-inline-start: 20px; }
 .issues li { margin: 2px 0; }
+
+/* fieldset كحاوية حقل — يتيح التعطيل الشرطي الأصيل (enabledWhen) */
+.field-fs { border: 0; margin: 0; padding: 0; min-inline-size: 0; }
+.field-fs:disabled { opacity: 0.5; }
+
+/* معالج الصفحات (wizard) — layout:step */
+.steps { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 16px; }
+.stepdot { background: #f1efe8; color: var(--muted); font-size: 12px; font-weight: 600; padding: 6px 12px; border-radius: 999px; display: inline-flex; align-items: center; gap: 6px; }
+.stepdot:hover { background: #e6e3da; }
+.stepdot.done { background: #cdeee1; color: var(--accent-d); }
+.stepdot.on { background: var(--accent); color: #fff; }
+.stepnum { display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; border-radius: 50%; background: rgba(255,255,255,.45); font-size: 11px; }
+.wizard-nav { display: flex; align-items: center; gap: 12px; margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--border); }
 .msg-ok { color: var(--accent-d); font-size: 13px; }
 .msg-err { color: #993c1d; font-size: 13px; }
 .meta { font-size: 12px; color: var(--muted); margin-top: 8px; }

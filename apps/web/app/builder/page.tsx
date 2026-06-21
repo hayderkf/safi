@@ -388,8 +388,9 @@ function FieldEditor({
         </div>
       )}
 
-      {/* شرط الرؤية */}
-      <RulesEditor value={f.visibilityWhen} candidates={candidates} onChange={(visibilityWhen) => onPatch({ visibilityWhen })} />
+      {/* شرط الرؤية + شرط التفعيل (تعطيل) */}
+      <RulesEditor title="شرط الرؤية (visibilityWhen)" value={f.visibilityWhen} candidates={candidates} onChange={(visibilityWhen) => onPatch({ visibilityWhen })} />
+      <RulesEditor title="شرط التفعيل (enabledWhen) — يُعطَّل إن لم يتحقّق" value={f.enabledWhen} candidates={candidates} onChange={(enabledWhen) => onPatch({ enabledWhen })} />
     </div>
   );
 }
@@ -464,7 +465,7 @@ function ColumnsEditor({ value, onChange }: { value?: Column[]; onChange: (v: Co
   );
 }
 
-function RulesEditor({ value, candidates, onChange }: { value?: RuleGroup; candidates: FormField[]; onChange: (v: RuleGroup | undefined) => void }) {
+function RulesEditor({ value, candidates, onChange, title }: { value?: RuleGroup; candidates: FormField[]; onChange: (v: RuleGroup | undefined) => void; title: string }) {
   const g = value;
   const rules = g?.rules || [];
   const update = (next: RuleGroup) => onChange(next.rules && next.rules.length ? next : undefined);
@@ -475,7 +476,7 @@ function RulesEditor({ value, candidates, onChange }: { value?: RuleGroup; candi
 
   return (
     <div className="sect">
-      <div className="sect-title">شرط الرؤية (visibilityWhen)</div>
+      <div className="sect-title">{title}</div>
       {rules.length > 0 && (
         <Field label="الدمج">
           <select value={g?.mode || "all"} onChange={(e) => update({ mode: e.target.value as "all" | "any", rules })}>

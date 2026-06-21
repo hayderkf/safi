@@ -40,6 +40,8 @@ export function evalGroup(g: RuleGroup | undefined, values: Values, fallback = t
 export const isVisible = (f: FormField, values: Values) => evalGroup(f.visibilityWhen, values, true);
 export const isRequired = (f: FormField, values: Values) =>
   f.requiredWhen ? evalGroup(f.requiredWhen, values, false) : !!f.isRequired;
+export const isEnabled = (f: FormField, values: Values) =>
+  f.enabledWhen ? evalGroup(f.enabledWhen, values, true) : true;
 
 // ---- تحقّق الإرسال: الحقول المطلوبة الظاهرة غير المعبّأة ----
 export function isEmptyValue(v: unknown): boolean {

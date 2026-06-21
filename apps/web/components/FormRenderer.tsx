@@ -2,10 +2,11 @@
 // مُصيِّر الاستمارة الديناميكي: يبني الواجهة من مخطط IR + يقيّم المنطق الشرطي.
 // يدعم: الحقول الأساسية + الاختيار (ثابت أو مُسنَد لقائمة ساندة) + المجموعات (صفحة/متكرّر حقيقي)
 // + جدول + مصفوفة + range/rate/file/image/signature/map/qrcode. النطاقات المتداخلة عبر تمرير values/onChange محليّين.
-import { useEffect, useState } from "react";
+import { useState, type ReactNode } from "react";
+import { useEffect } from "react";
 import type { Column, FormField, MatrixRow, Option, Values } from "@/lib/types";
 import { label } from "@/lib/types";
-import { isRequired, isVisible } from "@/lib/rules";
+import { isEnabled, isRequired, isVisible, validateForm } from "@/lib/rules";
 import { getLookup, type LookupItem } from "@/lib/api";
 import SignaturePad from "@/components/SignaturePad";
 
@@ -18,13 +19,93 @@ interface Props {
   onChange: (id: string, v: unknown) => void;
 }
 
+// ---- تقسيم الاستمارة إلى صفحات (معالج): كل groupField layout:step صفحة ----
+interface Page {
+  title: string;
+  fields: FormField[];
+}
+function buildPages(fields: FormField[]): Page[] {
+  const pages: Page[] = [];
+  let loose: FormField[] = [];
+  const flush = () => {
+    if (loose.length) {
+      pages.push({ title: "", fields: loose });
+      loose = [];
+    }
+  };
+  for (const f of fields) {
+    if (f.type === "groupField" && f.layout === "step") {
+      flush();
+      pages.push({ title: label(f), fields: f.subFields || [] });
+    } else {
+      loose.push(f);
+    }
+  }
+  flush();
+  return pages;
+}
+
 export default function FormRenderer({ fields, values, onChange }: Props) {
+  const pages = buildPages(fields);
+  const wizard = pages.length > 1 && fields.some((f) => f.type === "groupField" && f.layout === "step");
+  const [step, setStep] = useState(0);
+
+  if (!wizard) {
+    return (
+      <>
+        {fields.map((f) => (
+          <FieldView key={f.id} f={f} values={values} onChange={onChange} />
+        ))}
+      </>
+    );
+  }
+
+  const cur = Math.min(step, pages.length - 1);
+  const page = pages[cur];
+  const pageErrors = validateForm(page.fields, values);
+
   return (
-    <>
-      {fields.map((f) => (
-        <FieldView key={f.id} f={f} values={values} onChange={onChange} />
-      ))}
-    </>
+    <div className="wizard">
+      <div className="steps">
+        {pages.map((p, i) => (
+          <button
+            key={i}
+            type="button"
+            className={`stepdot${i === cur ? " on" : ""}${i < cur ? " done" : ""}`}
+            onClick={() => setStep(i)}
+          >
+            <span className="stepnum">{i + 1}</span>
+            {p.title || `صفحة ${i + 1}`}
+          </button>
+        ))}
+      </div>
+      <div className="wizard-page">
+        {page.fields.map((f) => (
+          <FieldView key={f.id} f={f} values={values} onChange={onChange} />
+        ))}
+      </div>
+      {cur < pages.length - 1 && pageErrors.length > 0 && (
+        <div className="issues" style={{ marginTop: 8 }}>
+          أكمل قبل المتابعة: {pageErrors.map((e) => e.label).join("، ")}
+        </div>
+      )}
+      <div className="wizard-nav">
+        <button type="button" className="add-btn" disabled={cur === 0} onClick={() => setStep(cur - 1)}>
+          ◄ السابق
+        </button>
+        <span className="meta">صفحة {cur + 1} من {pages.length}</span>
+        {cur < pages.length - 1 && (
+          <button
+            type="button"
+            disabled={pageErrors.length > 0}
+            onClick={() => setStep(cur + 1)}
+            title={pageErrors.length > 0 ? "أكمل الحقول المطلوبة في هذه الصفحة" : ""}
+          >
+            التالي ►
+          </button>
+        )}
+      </div>
+    </div>
   );
 }
 
@@ -41,46 +122,59 @@ function FieldView({
 
   const lab = label(f);
   const req = isRequired(f, values);
+  const dis = !isEnabled(f, values); // التعطيل الشرطي (يتتالى أصيلاً عبر fieldset)
   const v = values[f.id];
 
-  // حاوية (مجموعة / صفحة / متكرّر حقيقي)
+  let content: ReactNode;
+
   if (f.type === "groupField") {
-    if (f.isRepeating) return <RepeatingGroup f={f} v={v} onChange={onChange} lab={lab} />;
-    return (
+    content = f.isRepeating ? (
+      <RepeatingGroup f={f} v={v} onChange={onChange} lab={lab} />
+    ) : (
       <div className="group">
         <div className="gtitle">
           {lab}
-          {f.layout === "step" && <span className="step-badge">صفحة</span>}
+          {f.layout === "step" && <span className="step-badge">قسم</span>}
         </div>
         {(f.subFields || []).map((sf) => (
           <FieldView key={sf.id} f={sf} values={values} onChange={onChange} />
         ))}
       </div>
     );
-  }
-
-  // ملاحظة (عرض فقط)
-  if (f.type === "noteField") {
-    return (
+  } else if (f.type === "noteField") {
+    content = (
       <div className="field">
         <div className="note">{lab}</div>
       </div>
     );
+  } else if ((f.type === "dropdownField" || f.type === "radioField" || f.type === "checkboxField") && f.dataSourceKey) {
+    content = <LookupChoice f={f} v={v} values={values} onChange={onChange} lab={lab} req={req} />;
+  } else {
+    const Lbl = () => (
+      <label>
+        {lab}
+        {req && <span className="req"> *</span>}
+      </label>
+    );
+    content = renderLeaf(f, v, onChange, Lbl, lab, req);
   }
 
-  // حقل اختيار مُسنَد لقائمة ساندة (dataSourceKey) — يجلب خياراته من الخادم بدل options الثابتة
-  const isChoice = f.type === "dropdownField" || f.type === "radioField" || f.type === "checkboxField";
-  if (isChoice && f.dataSourceKey) {
-    return <LookupChoice f={f} v={v} values={values} onChange={onChange} lab={lab} req={req} />;
-  }
-
-  const Lbl = () => (
-    <label>
-      {lab}
-      {req && <span className="req"> *</span>}
-    </label>
+  return (
+    <fieldset className="field-fs" disabled={dis}>
+      {content}
+    </fieldset>
   );
+}
 
+// ---- تصيير الحقول الورقية (غير الحاويات) ----
+function renderLeaf(
+  f: FormField,
+  v: unknown,
+  onChange: (id: string, v: unknown) => void,
+  Lbl: () => ReactNode,
+  lab: string,
+  req: boolean,
+): ReactNode {
   switch (f.type) {
     case "textField":
       return (
