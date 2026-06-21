@@ -5,14 +5,16 @@ mkdir -p "$SAFI/.logs"
 
 echo "تشغيل الباك إند..."
 cd "$SAFI/backend"
-# shellcheck disable=SC1091
-source .venv/bin/activate
-nohup uvicorn app.main:app --port 8601 > "$SAFI/.logs/backend.log" 2>&1 &
+# تشغيل uvicorn مباشرةً من ثنائي venv (أصمد من تفعيل البيئة) ومفصولاً عن الطرفية
+nohup ./.venv/bin/uvicorn app.main:app --port 8601 </dev/null > "$SAFI/.logs/backend.log" 2>&1 &
+disown
 echo "  → http://localhost:8601   (السجل: .logs/backend.log)"
 
 echo "تشغيل الواجهة..."
 cd "$SAFI/apps/web"
-nohup npm run dev > "$SAFI/.logs/web.log" 2>&1 &
+# تشغيل next مباشرةً (لا npm) ومفصولاً — npm يموت أحياناً مع تنظيف مجموعة العمليات
+nohup ./node_modules/.bin/next dev -p 3601 </dev/null > "$SAFI/.logs/web.log" 2>&1 &
+disown
 echo "  → http://localhost:3601   (السجل: .logs/web.log)"
 
 echo ""
