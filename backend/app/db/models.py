@@ -7,7 +7,7 @@ from __future__ import annotations
 import datetime
 import uuid
 
-from sqlalchemy import DateTime, Float, Integer, String, func
+from sqlalchemy import Boolean, DateTime, Float, Integer, String, func
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -67,6 +67,34 @@ class LookupItem(Base):
     source: Mapped[str] = mapped_column(String, default="")             # مصدر القيمة
     confidence: Mapped[float] = mapped_column(Float, default=1.0)       # درجة الثقة
     version: Mapped[int] = mapped_column(Integer, default=1)            # إصدار البيان
+    created_at: Mapped[datetime.datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+
+# ---------- الهوية والصلاحيات (RBAC) ----------
+class Role(Base):
+    __tablename__ = "roles"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    key: Mapped[str] = mapped_column(String, unique=True, index=True)   # admin | reviewer | data_entry | viewer
+    label: Mapped[dict] = mapped_column(JSONB, default=dict)            # ترجمات الاسم {ar,en}
+    permissions: Mapped[list] = mapped_column(JSONB, default=list)      # قائمة صلاحيات؛ "*" = الكل
+    created_at: Mapped[datetime.datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+
+class User(Base):
+    __tablename__ = "users"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    username: Mapped[str] = mapped_column(String, unique=True, index=True)
+    email: Mapped[str] = mapped_column(String, default="")
+    full_name: Mapped[str] = mapped_column(String, default="")
+    password_hash: Mapped[str] = mapped_column(String, default="")      # pbkdf2_sha256$... (لا كلمة مرور خام)
+    role_keys: Mapped[list] = mapped_column(JSONB, default=list)        # أدوار المستخدم (علاقة منطقية بـ roles.key)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     created_at: Mapped[datetime.datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )

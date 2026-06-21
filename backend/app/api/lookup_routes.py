@@ -10,7 +10,8 @@ from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ..db.models import LookupItem, LookupList
+from ..auth.deps import require_permission
+from ..db.models import LookupItem, LookupList, User
 from ..db.session import get_session
 
 router = APIRouter(prefix="/lookups", tags=["lookups"])
@@ -50,7 +51,11 @@ def _item_dict(i: LookupItem) -> dict:
 
 # ---------- القوائم ----------
 @router.post("")
-async def create_list(req: CreateListRequest, session: AsyncSession = Depends(get_session)) -> dict:
+async def create_list(
+    req: CreateListRequest,
+    session: AsyncSession = Depends(get_session),
+    _user: User = Depends(require_permission("lookups:write")),
+) -> dict:
     existing = (
         await session.execute(select(LookupList).where(LookupList.key == req.key))
     ).scalar_one_or_none()
@@ -99,7 +104,10 @@ async def get_list(
 
 @router.post("/{key}/items")
 async def add_items(
-    key: str, req: AddItemsRequest, session: AsyncSession = Depends(get_session)
+    key: str,
+    req: AddItemsRequest,
+    session: AsyncSession = Depends(get_session),
+    _user: User = Depends(require_permission("lookups:write")),
 ) -> dict:
     if not (await session.execute(select(LookupList).where(LookupList.key == key))).scalar_one_or_none():
         raise HTTPException(status_code=404, detail="القائمة الساندة غير موجودة")

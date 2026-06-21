@@ -2,13 +2,14 @@
 
 > آخر تحديث: 2026-06-21 · هذه الوثيقة تخبر أي وكيل (Claude Code) **أين توقّفنا وما التالي**. اقرأ `CLAUDE.md` و`docs/BUILD_PLAN.md` و`docs/IR_SCHEMA.md` معها.
 
-## ما يعمل الآن ✅ (المراحل 0–4 منجزة، الواجهة v1)
+## ما يعمل الآن ✅ (المراحل 0–4 + مصادقة المرحلة ٥ في الباك إند)
 - **الباك إند (FastAPI، 8601):**
   - `POST /forms/generate` — وصف عربي → مخطط IR متحقَّق منه (طبقة تجريد مزوّد → Ollama `qwen2.5:14b`، تحقّق Pydantic + حلقة إصلاح).
   - `POST /forms`, `GET /forms`, `GET /forms/{id}` — حفظ/استرجاع (Postgres، تخزين هجين JSONB).
   - `POST /forms/{id}/submissions`, `GET /forms/{id}/submissions` — الإجابات.
   - **البيانات الساندة (المرحلة ٤):** `GET/POST /lookups`, `GET /lookups/{key}` (مع `?parent=` للتتالي), `POST /lookups/{key}/items`. جداول `lookup_lists` + `lookup_items` **بأعمدة إسناد** (`source`/`confidence`/`version`). بذور حيّة: محافظات العراق (18) + أقضية مختارة (15) متتالية. التحقّق الحيّ ✅.
-  - الجداول تُنشأ تلقائياً عند الإقلاع (`init_db`) + بذور القوائم (`seed_lookups`، idempotent). قاعدة البيانات: `safi`.
+  - **الهوية والصلاحيات (المرحلة ٥ — الباك إند):** `POST /auth/login` (JWT)، `GET /auth/me`، `POST /auth/register` (يتطلّب `users:manage`). **RBAC**: جداول `users` + `roles`؛ أدوار مزروعة (admin/reviewer/data_entry/viewer)، ومسؤول أولي `admin/admin` (dev — غيّره). الرمز **HS256 بالمكتبة القياسية** + تجزئة **PBKDF2**. تبعية `require_permission` تحمي حالياً **كتابة القوائم** (`lookups:write`) — تحقّق حيّ ✅ (بلا رمز=401، admin=200، القراءة مفتوحة).
+  - الجداول تُنشأ تلقائياً عند الإقلاع (`init_db`) + بذور idempotent (`seed_lookups` + `seed_auth`). قاعدة البيانات: `safi`.
 - **الواجهة (Next.js، 3601):** صفحة تولّد استمارة، تعرضها كنموذج حيّ (RTL)، تعبّئها وتحفظها.
   - المُصيِّر يدعم **مجموعة الأنواع الكاملة**: text, integer/double/number, date/datetime/time, dropdown, radio, checkbox, note + range, rate, file/image/audio/video, signature (canvas), map (lat/lng + تحديد الموقع), qrcode + **جدول** (`tableField` صفوف ديناميكية بأعمدة مُنمّطة) + **مصفوفة** (`matrixField` single/multiple) + **التكرار الحقيقي** (`groupField isRepeating` كمصفوفة نطاقات بإضافة/حذف) + **المنطق الشرطي** (`visibilityWhen`/`requiredWhen`).
   - **ربط القوائم الساندة:** حقل الاختيار الذي يحمل `dataSourceKey` يجلب خياراته من `/lookups` (مع التتالي عبر `parentFieldId`) ويعرض **شارة الإسناد** (المصدر + العدد). زرّ «تجربة قوائم ساندة» في الصفحة يحمّل استمارة محافظة←قضاء للتأكّد البصري.
@@ -20,7 +21,7 @@
 - المنافذ: الباك إند **8601**، الواجهة **3601**.
 
 ## خريطة الملفات
-- `backend/app/ai/provider.py` تجريد المزوّد · `ai/prompts.py` العقد · `forms/ir.py` نماذج IR · `forms/generate.py` التوليد+الإصلاح · `db/models.py` الجداول (forms/submissions + lookup_lists/lookup_items) · `db/seed.py` بذور القوائم · `api/routes.py` التوليد · `api/store_routes.py` الحفظ · `api/lookup_routes.py` البيانات الساندة.
+- `backend/app/ai/provider.py` تجريد المزوّد · `ai/prompts.py` العقد · `forms/ir.py` نماذج IR · `forms/generate.py` التوليد+الإصلاح · `db/models.py` الجداول (forms/submissions + lookup_lists/items + users/roles) · `db/seed.py` البذور · `auth/security.py` (تجزئة+JWT) · `auth/deps.py` (المستخدم الحالي + require_permission) · `api/{routes,store_routes,lookup_routes,auth_routes}.py`.
 - `apps/web/lib/{types,rules,api,builder}.ts` · `components/{FormRenderer,SignaturePad}.tsx` · `app/page.tsx` (التوليد) · `app/builder/page.tsx` (الباني).
 - `ai/poc/` نتائج إثبات المفهوم (مرجع).
 
@@ -28,8 +29,8 @@
 - ✅ **توسعة المُصيِّر — منجز** (range/rate/file/image/signature/map/qrcode + جدول + مصفوفة + التكرار الحقيقي). فرع `feat/renderer-expansion`.
 - ✅ **البيانات الساندة والإسناد (المرحلة ٤) — منجز** (قوائم + عناصر بإسناد + تتالٍ + ربط الواجهة + شارة الإسناد). نفس الفرع.
 - ✅ **الباني المرئي للاستمارات — منجز** (`/builder`: لوحة + شجرة + محرّر خصائص + ربط القوائم + معاينة + حفظ/تحميل/بدء بـ AI). نفس الفرع.
-- **المرحلة ٥ — التالي:** الهوية والصلاحيات (RBAC) وسير المراجعة (اعتماد متعدد المستويات).
-- **تحسينات الباني (لاحقاً):** سحب وإفلات فعلي، تحرير `requiredWhen`/`enabledWhen`، تحديث المراجع تلقائياً عند تغيير المعرّف، تحرير `subFields` بسحبها بين المجموعات.
+- 🟡 **المرحلة ٥ — جارية:** مصادقة الباك إند + RBAC **منجزة**. **التالي:** ربط واجهة الدخول (شاشة دخول + تخزين الرمز + إرفاق `Authorization` + إظهار المستخدم/الأدوار)، ثم **حماية تدريجية** لبقية المسارات (حفظ الاستمارات/الإرسال) بعد الربط، ثم **سير المراجعة** (حالات الاستمارة: مسودة→مراجعة→معتمد + `forms:review`).
+- **تحسينات الباني (لاحقاً):** سحب وإفلات فعلي، تحرير `requiredWhen`/`enabledWhen`، تحديث المراجع تلقائياً عند تغيير المعرّف، تحرير `subFields` بين المجموعات.
 
 ## بنود مفتوحة / ملاحظات
 - **بناء بنيوي محسّن:** الانتقال إلى **structured output (JSON schema)** + few-shot لضمان مخرَج صالح دائماً (حالياً نعتمد التحقّق + حلقة الإصلاح).
@@ -38,6 +39,7 @@
 - لا توجد هجرات Alembic بعد (نستخدم `create_all` للتطوير) — تُضاف قبل الإنتاج.
 - العلاقات منطقية بلا FK صارمة (استراتيجية النظام).
 - **البيانات الساندة:** البذور الحالية عيّنة يدوية (18 محافظة + 15 قضاء). الاستيراد الكامل للأقضية/النواحي من GADM (`IMSDIR/gadm41_IRQ_*.json`) متبقٍّ. لا واجهة إدارة للقوائم بعد (عبر API فقط) — تأتي مع الباني/لوحة الإدارة.
+- **المصادقة (مهم للإنتاج):** JWT بالمكتبة القياسية (HS256) وتجزئة PBKDF2 — كافٍ للتطوير؛ يُرقَّى لاحقاً إلى مكتبة JWT موثّقة + argon2/bcrypt. **غيّر `admin/admin` و`JWT_SECRET` عبر البيئة قبل أي نشر.** حالياً المُنفَّذ فقط `lookups:write`؛ حماية بقية المسارات تأتي مع ربط واجهة الدخول. الرمز عديم الحالة (يبطل عند إعادة التشغيل إن لم يُضبط `JWT_SECRET`).
 
 ## أرضية التكافؤ
 راجع `docs/IMS_New_System_Tech_Stack.md` §8 — لا ينزل الجديد عن قدرات IMS القديم.

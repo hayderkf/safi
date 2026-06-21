@@ -22,5 +22,12 @@ class Settings(BaseSettings):
     # قاعدة البيانات (Postgres محلي)
     database_url: str = "postgresql+asyncpg://localhost:5432/safi"
 
+    # المصادقة (JWT) — الأسرار من البيئة (لا أسرار في الكود)
+    jwt_secret: str = ""              # عيّنه في .env للإنتاج؛ إن فرغ يُولَّد لكل تشغيل (تطوير)
+    jwt_expire_minutes: int = 720     # صلاحية الرمز (12 ساعة)
+    # حساب المسؤول الأولي (bootstrap) — dev فقط، غيّره عبر البيئة في الإنتاج
+    admin_username: str = "admin"
+    admin_password: str = "admin"
+
 
 settings = Settings()

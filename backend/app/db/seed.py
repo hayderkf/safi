@@ -8,7 +8,9 @@ from __future__ import annotations
 
 from sqlalchemy import select
 
-from .models import LookupItem, LookupList
+from ..auth.security import hash_password
+from ..config import settings
+from .models import LookupItem, LookupList, Role, User
 from .session import SessionLocal
 
 _SRC = "seed:manual"
@@ -102,4 +104,37 @@ async def seed_lookups() -> None:
                     )
                 )
 
+        await session.commit()
+
+
+# ---------- الأدوار والمسؤول الأولي (RBAC) ----------
+DEFAULT_ROLES = [
+    ("admin", {"ar": "مسؤول", "en": "Admin"}, ["*"]),
+    ("reviewer", {"ar": "مراجِع", "en": "Reviewer"}, ["forms:read", "submissions:read", "forms:review"]),
+    ("data_entry", {"ar": "إدخال بيانات", "en": "Data Entry"},
+     ["forms:read", "forms:generate", "forms:write", "submissions:write", "lookups:read"]),
+    ("viewer", {"ar": "مطّلع", "en": "Viewer"}, ["forms:read", "lookups:read"]),
+]
+
+
+async def seed_auth() -> None:
+    """يزرع الأدوار الافتراضية + حساب المسؤول الأولي (idempotent)."""
+    async with SessionLocal() as session:
+        existing = set((await session.execute(select(Role.key))).scalars().all())
+        for key, label, perms in DEFAULT_ROLES:
+            if key not in existing:
+                session.add(Role(key=key, label=label, permissions=perms))
+
+        admin = (
+            await session.execute(select(User).where(User.username == settings.admin_username))
+        ).scalar_one_or_none()
+        if not admin:
+            session.add(
+                User(
+                    username=settings.admin_username,
+                    full_name="مسؤول النظام",
+                    password_hash=hash_password(settings.admin_password),
+                    role_keys=["admin"],
+                )
+            )
         await session.commit()
