@@ -14,6 +14,7 @@ import {
   findById,
   flatten,
   insertInto,
+  lintForm,
   makeField,
   moveById,
   removeById,
@@ -43,6 +44,7 @@ export default function BuilderPage() {
 
   const selected = selectedId ? findById(fields, selectedId) : null;
   const addTarget = selected?.type === "groupField" ? selected.id : null;
+  const issues = lintForm(fields);
 
   function add(type: string) {
     const f = makeField(type, fields);
@@ -174,6 +176,13 @@ export default function BuilderPage() {
           </div>
           <textarea readOnly value={desc} style={{ minHeight: 140, width: "100%" }} />
           <div className="meta">يمكنك لصق هذا الوصف في صفحة التوليد لإعادة إنشاء استمارة مماثلة.</div>
+        </div>
+      )}
+
+      {fields.length > 0 && issues.length > 0 && (
+        <div className="card issues">
+          <strong>مشاكل يُستحسن إصلاحها ({issues.length}):</strong>
+          <ul>{issues.map((s, i) => <li key={i}>{s.message}</li>)}</ul>
         </div>
       )}
 

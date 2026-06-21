@@ -113,6 +113,35 @@ export function insertInto(fields: FormField[], parentId: string | null, field: 
   });
 }
 
+// ---- فحص جودة الاستمارة (lint) قبل الحفظ ----
+export interface LintIssue {
+  message: string;
+}
+
+export function lintForm(fields: FormField[]): LintIssue[] {
+  const issues: LintIssue[] = [];
+  const counts = new Map<string, number>();
+  const walk = (items: FormField[]) => {
+    for (const f of items) {
+      counts.set(f.id, (counts.get(f.id) || 0) + 1);
+      const ar = f.labelTranslations?.ar?.trim();
+      if (f.type !== "noteField" && !ar) issues.push({ message: `«${f.id}»: بلا عنوان عربي` });
+      if (CHOICE_TYPES.has(f.type) && !f.dataSourceKey && !(f.options && f.options.length))
+        issues.push({ message: `«${f.id}»: حقل اختيار بلا خيارات ولا قائمة ساندة` });
+      if (f.type === "tableField" && !(f.columns && f.columns.length))
+        issues.push({ message: `«${f.id}»: جدول بلا أعمدة` });
+      if (f.type === "matrixField" && !(f.matrixRows && f.matrixRows.length))
+        issues.push({ message: `«${f.id}»: مصفوفة بلا صفوف` });
+      if (f.type === "groupField" && !(f.subFields && f.subFields.length))
+        issues.push({ message: `«${f.id}»: مجموعة فارغة` });
+      if (f.subFields) walk(f.subFields);
+    }
+  };
+  walk(fields);
+  for (const [id, n] of counts) if (n > 1) issues.push({ message: `معرّف مكرّر: «${id}» (${n} مرّات)` });
+  return issues;
+}
+
 // كل الحقول مسطّحة (للإشارة في القواعد/التتالي) عدا معرّف مستثنى
 export function flatten(fields: FormField[], excludeId?: string): FormField[] {
   const out: FormField[] = [];

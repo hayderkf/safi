@@ -39,6 +39,9 @@ button:disabled { opacity: .55; cursor: default; }
 .opts label { display: inline-flex; align-items: center; gap: 6px; margin-inline-end: 14px; font-weight: 400; }
 .note { background: #f1efe8; border-radius: 8px; padding: 10px 12px; font-size: 13px; color: var(--muted); }
 .todo { font-size: 12px; color: #993c1d; background: #faece7; border-radius: 8px; padding: 8px 10px; }
+.issues { background: #faece7; border: 1px solid #f0d0c4; color: #993c1d; font-size: 13px; margin-top: 12px; }
+.issues ul { margin: 6px 0 0; padding-inline-start: 20px; }
+.issues li { margin: 2px 0; }
 .msg-ok { color: var(--accent-d); font-size: 13px; }
 .msg-err { color: #993c1d; font-size: 13px; }
 .meta { font-size: 12px; color: var(--muted); margin-top: 8px; }

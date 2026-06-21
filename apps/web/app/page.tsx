@@ -3,6 +3,7 @@ import { useState } from "react";
 import Link from "next/link";
 import type { FormField, Values } from "@/lib/types";
 import { generateForm, saveForm, submitForm } from "@/lib/api";
+import { validateForm } from "@/lib/rules";
 import FormRenderer from "@/components/FormRenderer";
 import AuthBar from "@/components/AuthBar";
 
@@ -21,13 +22,16 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState<{ t: string; ok: boolean } | null>(null);
   const [meta, setMeta] = useState<any>(null);
+  const [tried, setTried] = useState(false);
 
   const onChange = (id: string, v: unknown) => setValues((s) => ({ ...s, [id]: v }));
+  const errors = tried && fields ? validateForm(fields, values) : [];
 
   function loadDemo() {
     setMsg(null);
     setMeta(null);
     setValues({});
+    setTried(false);
     setFields(DEMO_LOOKUP_IR);
   }
 
@@ -36,6 +40,7 @@ export default function Home() {
     setMsg(null);
     setFields(null);
     setValues({});
+    setTried(false);
     try {
       const r = await generateForm(prompt);
       if (!r.ok) throw new Error(r.meta?.error || "فشل التوليد");
@@ -50,6 +55,12 @@ export default function Home() {
 
   async function save() {
     if (!fields) return;
+    setTried(true);
+    const errs = validateForm(fields, values);
+    if (errs.length) {
+      setMsg({ t: `أكمل ${errs.length} حقلاً مطلوباً قبل الإرسال`, ok: false });
+      return;
+    }
     setLoading(true);
     setMsg(null);
     try {
@@ -92,6 +103,12 @@ export default function Home() {
       {fields && (
         <div className="card">
           <FormRenderer fields={fields} values={values} onChange={onChange} />
+          {errors.length > 0 && (
+            <div className="issues">
+              <strong>أكمل الحقول المطلوبة ({errors.length}):</strong>
+              <ul>{errors.map((e) => <li key={e.id}>{e.label}</li>)}</ul>
+            </div>
+          )}
           <div className="row" style={{ marginTop: 12 }}>
             <button onClick={save} disabled={loading}>
               حفظ وإرسال
