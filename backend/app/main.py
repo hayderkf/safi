@@ -8,6 +8,7 @@ from .api.auth_routes import router as auth_router
 from .api.lookup_routes import router as lookup_router
 from .api.routes import router as forms_router
 from .api.store_routes import router as store_router
+from .api.user_routes import router as user_router
 from .config import settings
 from .db.seed import seed_auth, seed_lookups
 from .db.session import init_db
@@ -33,6 +34,7 @@ app.add_middleware(
 )
 
 app.include_router(auth_router)    # /auth (تسجيل/دخول/المستخدم الحالي)
+app.include_router(user_router)    # /users, /roles (إدارة — users:manage)
 app.include_router(forms_router)   # /forms/generate
 app.include_router(store_router)   # /forms (حفظ/استرجاع) + /forms/{id}/submissions
 app.include_router(lookup_router)  # /lookups (البيانات الساندة + الإسناد)

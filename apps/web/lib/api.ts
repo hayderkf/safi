@@ -26,6 +26,16 @@ async function jget(path: string) {
   return r.json();
 }
 
+async function jsend(method: string, path: string, body?: unknown) {
+  const r = await fetch(`${BASE}${path}`, {
+    method,
+    headers: { "Content-Type": "application/json", ...authHeaders() },
+    body: body === undefined ? undefined : JSON.stringify(body),
+  });
+  check(r, path);
+  return r.json();
+}
+
 // ---- المصادقة ----
 export async function login(username: string, password: string): Promise<SessionUser> {
   const r = await fetch(`${BASE}/auth/login`, {
@@ -82,3 +92,42 @@ export async function getLookups(): Promise<
 > {
   return jget("/lookups");
 }
+
+// ---- الإدارة (تتطلّب users:manage / lookups:write) ----
+export interface AdminUser {
+  id: string;
+  username: string;
+  email: string;
+  full_name: string;
+  role_keys: string[];
+  is_active: boolean;
+}
+export interface RoleInfo {
+  key: string;
+  label?: Translations;
+  permissions: string[];
+}
+
+export const listUsers = (): Promise<AdminUser[]> => jget("/users");
+export const listRoles = (): Promise<RoleInfo[]> => jget("/roles");
+export const registerUser = (body: {
+  username: string;
+  password: string;
+  full_name?: string;
+  email?: string;
+  role_keys?: string[];
+}): Promise<AdminUser> => jpost("/auth/register", body);
+export const updateUser = (
+  id: string,
+  patch: Partial<{ role_keys: string[]; is_active: boolean; full_name: string; email: string; password: string }>
+): Promise<AdminUser> => jsend("PATCH", `/users/${id}`, patch);
+export const deleteUser = (id: string): Promise<{ deleted: string }> => jsend("DELETE", `/users/${id}`);
+
+export const createLookupList = (key: string, label: Translations, description = ""): Promise<unknown> =>
+  jpost("/lookups", { key, label, description });
+export const addLookupItems = (
+  key: string,
+  items: { value_key: string; label: Translations; parent_value_key?: string | null; source?: string }[]
+): Promise<unknown> => jpost(`/lookups/${encodeURIComponent(key)}/items`, { items });
+export const deleteLookupList = (key: string): Promise<unknown> =>
+  jsend("DELETE", `/lookups/${encodeURIComponent(key)}`);

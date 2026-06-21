@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
-from sqlalchemy import func, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..auth.deps import require_permission
@@ -100,6 +100,21 @@ async def get_list(
     stmt = stmt.order_by(LookupItem.sort_order, LookupItem.value_key)
     items = (await session.execute(stmt)).scalars().all()
     return {"key": key, "label": lst.label, "items": [_item_dict(i) for i in items]}
+
+
+@router.delete("/{key}")
+async def delete_list(
+    key: str,
+    session: AsyncSession = Depends(get_session),
+    _user: User = Depends(require_permission("lookups:write")),
+) -> dict:
+    lst = (await session.execute(select(LookupList).where(LookupList.key == key))).scalar_one_or_none()
+    if not lst:
+        raise HTTPException(status_code=404, detail="القائمة الساندة غير موجودة")
+    await session.execute(delete(LookupItem).where(LookupItem.list_key == key))
+    await session.delete(lst)
+    await session.commit()
+    return {"deleted": key}
 
 
 @router.post("/{key}/items")

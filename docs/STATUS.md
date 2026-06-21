@@ -8,13 +8,15 @@
   - `POST /forms`, `GET /forms`, `GET /forms/{id}` — حفظ/استرجاع (Postgres، تخزين هجين JSONB).
   - `POST /forms/{id}/submissions`, `GET /forms/{id}/submissions` — الإجابات.
   - **البيانات الساندة (المرحلة ٤):** `GET/POST /lookups`, `GET /lookups/{key}` (مع `?parent=` للتتالي), `POST /lookups/{key}/items`. جداول `lookup_lists` + `lookup_items` **بأعمدة إسناد** (`source`/`confidence`/`version`). بذور حيّة: محافظات العراق (18) + أقضية مختارة (15) متتالية. التحقّق الحيّ ✅.
-  - **الهوية والصلاحيات (المرحلة ٥):** `POST /auth/login` (JWT)، `GET /auth/me`، `POST /auth/register` (يتطلّب `users:manage`). **RBAC**: جداول `users` + `roles`؛ أدوار مزروعة (admin/reviewer/data_entry/viewer)، ومسؤول أولي `admin/admin` (dev — غيّره). الرمز **HS256 بالمكتبة القياسية** + تجزئة **PBKDF2**. تبعية `require_permission` تحمي: **التوليد** (`forms:generate`)، **حفظ الاستمارات** (`forms:write`)، **الإرسال** (`submissions:write`)، **كتابة القوائم** (`lookups:write`). القراءات مفتوحة. تحقّق حيّ ✅ (بلا رمز=401، admin=200).
+  - **الهوية والصلاحيات (المرحلة ٥):** `POST /auth/login` (JWT)، `GET /auth/me`، `POST /auth/register` (يتطلّب `users:manage`). **RBAC**: جداول `users` + `roles`؛ أدوار مزروعة (admin/reviewer/data_entry/viewer)، ومسؤول أولي `admin/admin` (dev — غيّره). الرمز **HS256 بالمكتبة القياسية** + تجزئة **PBKDF2**. تبعية `require_permission` تحمي: **التوليد** (`forms:generate`)، **حفظ الاستمارات** (`forms:write`)، **الإرسال** (`submissions:write`)، **كتابة/حذف القوائم** (`lookups:write`). القراءات مفتوحة. تحقّق حيّ ✅ (بلا رمز=401، admin=200).
+  - **إدارة المستخدمين (`users:manage`):** `GET /users`، `GET /roles`، `PATCH /users/{id}` (أدوار/تفعيل/اسم/كلمة مرور)، `DELETE /users/{id}`، `DELETE /lookups/{key}`. حُرّاس سلامة: لا حذف/تعطيل للنفس ولا إزالة آخر مسؤول نشط (تحقّق حيّ ✅ → 400).
   - الجداول تُنشأ تلقائياً عند الإقلاع (`init_db`) + بذور idempotent (`seed_lookups` + `seed_auth`). قاعدة البيانات: `safi`.
 - **الواجهة (Next.js، 3601):** صفحة تولّد استمارة، تعرضها كنموذج حيّ (RTL)، تعبّئها وتحفظها.
   - المُصيِّر يدعم **مجموعة الأنواع الكاملة**: text, integer/double/number, date/datetime/time, dropdown, radio, checkbox, note + range, rate, file/image/audio/video, signature (canvas), map (lat/lng + تحديد الموقع), qrcode + **جدول** (`tableField` صفوف ديناميكية بأعمدة مُنمّطة) + **مصفوفة** (`matrixField` single/multiple) + **التكرار الحقيقي** (`groupField isRepeating` كمصفوفة نطاقات بإضافة/حذف) + **المنطق الشرطي** (`visibilityWhen`/`requiredWhen`).
   - **ربط القوائم الساندة:** حقل الاختيار الذي يحمل `dataSourceKey` يجلب خياراته من `/lookups` (مع التتالي عبر `parentFieldId`) ويعرض **شارة الإسناد** (المصدر + العدد). زرّ «تجربة قوائم ساندة» في الصفحة يحمّل استمارة محافظة←قضاء للتأكّد البصري.
   - **الباني المرئي (`/builder`):** لوحة أنواع + شجرة حقول (مجموعات متداخلة، إعادة ترتيب/حذف) + محرّر خصائص كامل (عنوان/إلزام/خيارات ثابتة أو **ربط قائمة ساندة + تتالٍ**/أعمدة جدول/صفوف مصفوفة/شرط رؤية) + **معاينة حيّة**. يبدأ فارغاً أو من توليد AI أو بتحميل استمارة محفوظة، ويحفظ عبر `/forms`.
-  - **المصادقة (`AuthBar`):** شريط دخول مُدمج في الصفحتين (تخزين الرمز في localStorage، إرفاق `Authorization` آلياً في `lib/api`، إظهار المستخدم/الأدوار + خروج). التوليد/الحفظ/الإرسال تتطلّب دخولاً (admin/admin).
+  - **المصادقة (`AuthBar`):** شريط دخول مُدمج في الصفحات (تخزين الرمز في localStorage، إرفاق `Authorization` آلياً في `lib/api`، إظهار المستخدم/الأدوار + خروج). التوليد/الحفظ/الإرسال تتطلّب دخولاً (admin/admin).
+  - **لوحة الإدارة (`/admin`):** تظهر للمسؤول فقط (رابط «الإدارة» في الشريط). إدارة المستخدمين (إضافة، إسناد أدوار بمربّعات، تفعيل/تعطيل، حذف) + القوائم الساندة (إنشاء، إضافة عناصر بتتالٍ، حذف قائمة).
 
 ## التشغيل
 - `bash ~/Documents/Safi/start.sh` (تشغيل) · `bash ~/Documents/Safi/stop.sh` (إيقاف).
@@ -22,15 +24,15 @@
 - المنافذ: الباك إند **8601**، الواجهة **3601**.
 
 ## خريطة الملفات
-- `backend/app/ai/provider.py` تجريد المزوّد · `ai/prompts.py` العقد · `forms/ir.py` نماذج IR · `forms/generate.py` التوليد+الإصلاح · `db/models.py` الجداول (forms/submissions + lookup_lists/items + users/roles) · `db/seed.py` البذور · `auth/security.py` (تجزئة+JWT) · `auth/deps.py` (المستخدم الحالي + require_permission) · `api/{routes,store_routes,lookup_routes,auth_routes}.py`.
-- `apps/web/lib/{types,rules,api,builder}.ts` · `components/{FormRenderer,SignaturePad}.tsx` · `app/page.tsx` (التوليد) · `app/builder/page.tsx` (الباني).
+- `backend/app/ai/provider.py` تجريد المزوّد · `ai/prompts.py` العقد · `forms/ir.py` نماذج IR · `forms/generate.py` التوليد+الإصلاح · `db/models.py` الجداول (forms/submissions + lookup_lists/items + users/roles) · `db/seed.py` البذور · `auth/security.py` (تجزئة+JWT) · `auth/deps.py` (المستخدم الحالي + require_permission) · `api/{routes,store_routes,lookup_routes,auth_routes,user_routes}.py`.
+- `apps/web/lib/{types,rules,api,builder,auth}.ts` · `components/{FormRenderer,SignaturePad,AuthBar}.tsx` · `app/page.tsx` (التوليد) · `app/builder/page.tsx` (الباني) · `app/admin/page.tsx` (الإدارة).
 - `ai/poc/` نتائج إثبات المفهوم (مرجع).
 
 ## التالي (اختر من BUILD_PLAN)
 - ✅ **توسعة المُصيِّر — منجز** (range/rate/file/image/signature/map/qrcode + جدول + مصفوفة + التكرار الحقيقي). فرع `feat/renderer-expansion`.
 - ✅ **البيانات الساندة والإسناد (المرحلة ٤) — منجز** (قوائم + عناصر بإسناد + تتالٍ + ربط الواجهة + شارة الإسناد). نفس الفرع.
 - ✅ **الباني المرئي للاستمارات — منجز** (`/builder`: لوحة + شجرة + محرّر خصائص + ربط القوائم + معاينة + حفظ/تحميل/بدء بـ AI). نفس الفرع.
-- ✅ **المرحلة ٥ (المصادقة) — منجزة:** RBAC في الباك إند + ربط واجهة الدخول + حماية التوليد/الحفظ/الإرسال/كتابة القوائم. **التالي:** **سير المراجعة** (حالات الاستمارة/العينة: مسودة→مراجعة→معتمد/مرفوض + صلاحية `forms:review` + سجلّ تدقيق)، و**لوحة إدارة المستخدمين/الأدوار** في الواجهة، و**مستخدم خارجي بلا حساب** (رابط/رمز إرسال عام).
+- ✅ **المرحلة ٥ (المصادقة + الإدارة) — منجزة:** RBAC + ربط الدخول + حماية المسارات + **لوحة إدارة المستخدمين/الأدوار/القوائم** (`/admin`). **التالي:** **سير المراجعة** (حالات العينة: مسودة→مراجعة→معتمد/مرفوض + `forms:review` + سجلّ تدقيق)، و**مستخدم خارجي بلا حساب** (رابط/رمز إرسال عام)، ثم **المرحلة ٦** (البحث الدلالي pgvector).
 - **تحسينات الباني (لاحقاً):** سحب وإفلات فعلي، تحرير `requiredWhen`/`enabledWhen`، تحديث المراجع تلقائياً عند تغيير المعرّف، تحرير `subFields` بين المجموعات.
 
 ## بنود مفتوحة / ملاحظات

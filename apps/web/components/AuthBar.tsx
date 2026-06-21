@@ -1,7 +1,8 @@
 "use client";
 // شريط المصادقة: يعرض المستخدم الحالي + خروج، أو نموذج دخول مُدمج.
 import { useEffect, useState } from "react";
-import { clearSession, getUser, onAuthChange, type SessionUser } from "@/lib/auth";
+import Link from "next/link";
+import { can, clearSession, getUser, onAuthChange, type SessionUser } from "@/lib/auth";
 import { login } from "@/lib/api";
 
 export default function AuthBar() {
@@ -33,6 +34,7 @@ export default function AuthBar() {
   if (user)
     return (
       <div className="authbar">
+        {can(user, "users:manage") && <Link href="/admin" className="navlink">الإدارة</Link>}
         <span>
           👤 {user.username} <span className="muted sm">({(user.role_keys || []).join("، ") || "بلا دور"})</span>
         </span>
