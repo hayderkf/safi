@@ -5,6 +5,7 @@ import Link from "next/link";
 import { can, getUser, onAuthChange, type SessionUser } from "@/lib/auth";
 import {
   addLookupItems,
+  checkSimilarLookup,
   createLookupList,
   deleteLookupItem,
   deleteLookupList,
@@ -22,6 +23,7 @@ import {
   type LookupItem,
   type ProposedLookupItem,
   type RoleInfo,
+  type SimilarMatch,
 } from "@/lib/api";
 import AuthBar from "@/components/AuthBar";
 
@@ -169,6 +171,8 @@ function LookupsSection() {
   const [tlabel, setTlabel] = useState("");
   const [warnings, setWarnings] = useState<string[]>([]);
   const [xlBusy, setXlBusy] = useState(false);
+  // كشف التشابه (منع تكرار القوائم)
+  const [similar, setSimilar] = useState<{ matches: SimilarMatch[]; block: boolean; ctx: "create" | "approve" } | null>(null);
   // تحرير عناصر قائمة موجودة
   const [expandedKey, setExpandedKey] = useState<string | null>(null);
   const [items, setItems] = useState<LookupItem[]>([]);
@@ -194,9 +198,16 @@ function LookupsSection() {
     deleteLookupItem(key, vk).then(() => { refreshItems(key); reload(); }).catch((e) => setMsg({ t: e.message, ok: false }));
   }
 
-  function addList() {
+  async function tryAddList() {
     if (!nkey.trim()) return;
-    guard(createLookupList(nkey.trim(), { ar: nar }, ndesc).then(() => { setNkey(""); setNar(""); setNdesc(""); }));
+    try {
+      const r = await checkSimilarLookup({ key: nkey.trim(), label: { ar: nar } });
+      if (r.matches.length) { setSimilar({ ...r, ctx: "create" }); return; }
+    } catch { /* فشل الفحص لا يمنع المتابعة */ }
+    doAddList(false);
+  }
+  function doAddList(force: boolean) {
+    guard(createLookupList(nkey.trim(), { ar: nar }, ndesc, { force }).then(() => { setNkey(""); setNar(""); setNdesc(""); setSimilar(null); }));
   }
   function addItem() {
     if (!itemList || !ivk.trim()) return;
@@ -245,15 +256,24 @@ function LookupsSection() {
       setXlBusy(false);
     }
   }
-  function approveProposed() {
+  const proposedLabels = () => (proposed || []).map((p) => p.label?.ar || "").filter(Boolean);
+  async function tryApprove() {
     if (!proposed?.length || !tkey.trim()) {
       setMsg({ t: "أدخل مفتاح القائمة وراجِع العناصر", ok: false });
       return;
     }
+    try {
+      const r = await checkSimilarLookup({ key: tkey.trim(), label: { ar: tlabel || tkey.trim() }, item_labels: proposedLabels() });
+      if (r.matches.length) { setSimilar({ ...r, ctx: "approve" }); return; }
+    } catch { /* تجاهل */ }
+    doApprove(false);
+  }
+  function doApprove(force: boolean) {
+    if (!proposed?.length || !tkey.trim()) return;
     guard(
-      createLookupList(tkey.trim(), { ar: tlabel || tkey.trim() })
+      createLookupList(tkey.trim(), { ar: tlabel || tkey.trim() }, "", { force, item_labels: proposedLabels() })
         .then(() => addLookupItems(tkey.trim(), proposed))
-        .then(() => { setProposed(null); setGenDesc(""); setTkey(""); setTlabel(""); setWarnings([]); })
+        .then(() => { setProposed(null); setGenDesc(""); setTkey(""); setTlabel(""); setWarnings([]); setSimilar(null); })
     );
   }
 
@@ -261,12 +281,31 @@ function LookupsSection() {
     <div className="card">
       <div className="col-title">القوائم الساندة ({lists.length}) <Msg msg={msg} /></div>
 
+      {similar && (
+        <div className="issues">
+          <strong>{similar.block ? "⛔ قائمة مشابهة جداً موجودة — يُمنع التكرار:" : "⚠️ قوائم متقاربة موجودة (راجِع قبل الإنشاء):"}</strong>
+          <ul>
+            {similar.matches.map((m) => (
+              <li key={m.key}>
+                {m.label?.ar || m.key} <span className="muted sm">({m.key}) — تشابه {Math.round(m.score * 100)}%{m.overlap > 0 ? ` · تداخل عناصر ${Math.round(m.overlap * 100)}%` : ""}</span>
+              </li>
+            ))}
+          </ul>
+          <div className="row mini">
+            <button className="del-btn" onClick={() => (similar.ctx === "approve" ? doApprove(true) : doAddList(true))}>
+              {similar.block ? "تجاهل وأنشئ مكرّرة" : "متابعة الإنشاء"}
+            </button>
+            <button className="add-btn" onClick={() => setSimilar(null)}>إلغاء</button>
+          </div>
+        </div>
+      )}
+
       <div className="sect">
         <div className="sect-title">إنشاء قائمة</div>
         <div className="row mini">
           <input style={{ width: 150 }} value={nkey} onChange={(e) => setNkey(e.target.value)} placeholder="المفتاح (key)" />
           <input style={{ flex: 1, minWidth: 120 }} value={nar} onChange={(e) => setNar(e.target.value)} placeholder="الاسم (عربي)" />
-          <button className="add-btn" onClick={addList}>+ قائمة</button>
+          <button className="add-btn" onClick={tryAddList}>+ قائمة</button>
         </div>
         <input style={{ marginTop: 6 }} value={ndesc} onChange={(e) => setNdesc(e.target.value)} placeholder="وصف (اختياري)" />
       </div>
@@ -330,7 +369,7 @@ function LookupsSection() {
               </table>
             </div>
             <div className="row mini" style={{ marginTop: 6 }}>
-              <button className="add-btn" onClick={approveProposed}>اعتماد وحفظ ({proposed.length})</button>
+              <button className="add-btn" onClick={tryApprove}>اعتماد وحفظ ({proposed.length})</button>
               <button className="del-btn" onClick={() => setProposed(null)}>إلغاء</button>
               <span className="muted sm">المصدر: {proposed[0]?.source} · ثقة {proposed[0]?.confidence}</span>
             </div>

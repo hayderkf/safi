@@ -17,6 +17,7 @@ from ..db.models import LookupItem, LookupList, User
 from ..db.session import get_session
 from ..forms.lookup_excel import parse_lookup_excel
 from ..forms.lookup_gen import generate_lookup_items
+from ..forms.lookup_similar import find_similar_lists
 
 router = APIRouter(prefix="/lookups", tags=["lookups"])
 
@@ -26,6 +27,14 @@ class CreateListRequest(BaseModel):
     key: str
     label: dict[str, str] = Field(default_factory=dict)
     description: str = ""
+    item_labels: list[str] = Field(default_factory=list)  # لفحص تداخل المحتوى عند الإنشاء
+    force: bool = False  # تجاوز منع التشابه
+
+
+class CheckSimilarRequest(BaseModel):
+    key: str = ""
+    label: dict[str, str] = Field(default_factory=dict)
+    item_labels: list[str] = Field(default_factory=list)
 
 
 class ItemIn(BaseModel):
@@ -83,10 +92,29 @@ async def create_list(
         existing.description = req.description or existing.description
         await session.commit()
         return {"key": existing.key, "created": False}
+    # حاجز منع التكرار: قائمة مشابهة جداً تُرفض إلا بتجاوز صريح (force)
+    if not req.force:
+        matches, block = await find_similar_lists(session, req.key, req.label.get("ar", ""), req.item_labels)
+        if block:
+            raise HTTPException(
+                status_code=409,
+                detail={"message": "توجد قائمة ساندة مشابهة جداً — استخدم force للتجاوز", "matches": matches},
+            )
     lst = LookupList(key=req.key, label=req.label, description=req.description)
     session.add(lst)
     await session.commit()
     return {"key": lst.key, "created": True}
+
+
+@router.post("/check-similar")
+async def check_similar(
+    req: CheckSimilarRequest,
+    session: AsyncSession = Depends(get_session),
+    _user: User = Depends(require_permission("lookups:write")),
+) -> dict:
+    """يكشف القوائم المشابهة/المتقاربة قبل الإنشاء (اسم + تداخل محتوى)."""
+    matches, block = await find_similar_lists(session, req.key, req.label.get("ar", ""), req.item_labels)
+    return {"matches": matches, "block": block}
 
 
 @router.post("/generate")

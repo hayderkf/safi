@@ -135,8 +135,25 @@ export interface ProposedLookupItem {
   source?: string;
   confidence?: number;
 }
-export const createLookupList = (key: string, label: Translations, description = ""): Promise<unknown> =>
-  jpost("/lookups", { key, label, description });
+export const createLookupList = (
+  key: string,
+  label: Translations,
+  description = "",
+  opts?: { force?: boolean; item_labels?: string[] }
+): Promise<unknown> =>
+  jpost("/lookups", { key, label, description, force: opts?.force ?? false, item_labels: opts?.item_labels ?? [] });
+export interface SimilarMatch {
+  key: string;
+  label?: Translations;
+  score: number;
+  name_score: number;
+  overlap: number;
+}
+export const checkSimilarLookup = (body: {
+  key: string;
+  label?: Translations;
+  item_labels?: string[];
+}): Promise<{ matches: SimilarMatch[]; block: boolean }> => jpost("/lookups/check-similar", body);
 export const addLookupItems = (key: string, items: ProposedLookupItem[]): Promise<unknown> =>
   jpost(`/lookups/${encodeURIComponent(key)}/items`, { items });
 export const deleteLookupList = (key: string): Promise<unknown> =>
