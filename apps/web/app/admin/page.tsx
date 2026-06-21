@@ -8,12 +8,14 @@ import {
   createLookupList,
   deleteLookupList,
   deleteUser,
+  generateLookup,
   getLookups,
   listRoles,
   listUsers,
   registerUser,
   updateUser,
   type AdminUser,
+  type ProposedLookupItem,
   type RoleInfo,
 } from "@/lib/api";
 import AuthBar from "@/components/AuthBar";
@@ -153,6 +155,13 @@ function LookupsSection() {
   const [ivk, setIvk] = useState("");
   const [iar, setIar] = useState("");
   const [iparent, setIparent] = useState("");
+  // توليد بالذكاء (يُراجَع قبل الحفظ)
+  const [genDesc, setGenDesc] = useState("");
+  const [genHier, setGenHier] = useState(false);
+  const [genBusy, setGenBusy] = useState(false);
+  const [proposed, setProposed] = useState<ProposedLookupItem[] | null>(null);
+  const [tkey, setTkey] = useState("");
+  const [tlabel, setTlabel] = useState("");
 
   const reload = useCallback(() => {
     getLookups().then(setLists).catch((e) => setMsg({ t: e.message, ok: false }));
@@ -172,6 +181,37 @@ function LookupsSection() {
       addLookupItems(itemList, [
         { value_key: ivk.trim(), label: { ar: iar }, parent_value_key: iparent.trim() || null, source: "admin:manual" },
       ]).then(() => { setIvk(""); setIar(""); setIparent(""); })
+    );
+  }
+
+  // ---- توليد بالذكاء → مراجعة → اعتماد ----
+  async function doGenerate() {
+    if (!genDesc.trim()) return;
+    setGenBusy(true);
+    setMsg(null);
+    try {
+      const r = await generateLookup(genDesc.trim(), genHier);
+      if (!r.ok || !r.items.length) throw new Error("تعذّر التوليد");
+      setProposed(r.items);
+    } catch (e: any) {
+      setMsg({ t: e.message, ok: false });
+    } finally {
+      setGenBusy(false);
+    }
+  }
+  const editProposed = (i: number, p: Partial<ProposedLookupItem>) =>
+    setProposed((s) => (s ? s.map((it, idx) => (idx === i ? { ...it, ...p } : it)) : s));
+  const editProposedAr = (i: number, ar: string) =>
+    editProposed(i, { label: { ...(proposed?.[i].label || {}), ar } });
+  function approveProposed() {
+    if (!proposed?.length || !tkey.trim()) {
+      setMsg({ t: "أدخل مفتاح القائمة وراجِع العناصر", ok: false });
+      return;
+    }
+    guard(
+      createLookupList(tkey.trim(), { ar: tlabel || tkey.trim() })
+        .then(() => addLookupItems(tkey.trim(), proposed))
+        .then(() => { setProposed(null); setGenDesc(""); setTkey(""); setTlabel(""); })
     );
   }
 
@@ -201,6 +241,47 @@ function LookupsSection() {
           <input style={{ width: 130 }} value={iparent} onChange={(e) => setIparent(e.target.value)} placeholder="قيمة الأب (للتتالي)" />
           <button className="add-btn" onClick={addItem} disabled={!itemList}>+ عنصر</button>
         </div>
+      </div>
+
+      {/* توليد بالذكاء → مراجعة بشرية → اعتماد */}
+      <div className="sect">
+        <div className="sect-title">توليد قائمة بالذكاء (يراجعها المسؤول قبل الحفظ)</div>
+        <textarea value={genDesc} onChange={(e) => setGenDesc(e.target.value)} style={{ minHeight: 52 }}
+          placeholder="صِف القائمة — مثلاً: «محافظات العراق وأقضيتها» أو «أنواع المؤسسات التعليمية»" />
+        <div className="row mini" style={{ marginTop: 6 }}>
+          <label className="chk"><input type="checkbox" checked={genHier} onChange={(e) => setGenHier(e.target.checked)} /> هرمية/متتالية (أب ← ابن)</label>
+          <button className="add-btn" onClick={doGenerate} disabled={genBusy || !genDesc.trim()}>{genBusy ? "…جارٍ" : "توليد مقترح"}</button>
+        </div>
+
+        {proposed && (
+          <div style={{ marginTop: 10, borderTop: "1px solid var(--border)", paddingTop: 10 }}>
+            <div className="row mini">
+              <input style={{ width: 150 }} value={tkey} onChange={(e) => setTkey(e.target.value)} placeholder="مفتاح القائمة (key)" />
+              <input style={{ flex: 1, minWidth: 120 }} value={tlabel} onChange={(e) => setTlabel(e.target.value)} placeholder="اسم القائمة (عربي)" />
+              <span className="muted sm">{proposed.length} عنصر · راجِع/عدّل</span>
+            </div>
+            <div className="tbl-wrap" style={{ marginTop: 6 }}>
+              <table className="tbl">
+                <thead><tr><th>value_key</th><th>العرض (عربي)</th>{genHier && <th>الأب</th>}<th className="tbl-x"></th></tr></thead>
+                <tbody>
+                  {proposed.map((it, i) => (
+                    <tr key={i}>
+                      <td><input value={it.value_key} onChange={(e) => editProposed(i, { value_key: e.target.value })} /></td>
+                      <td><input value={it.label?.ar ?? ""} onChange={(e) => editProposedAr(i, e.target.value)} /></td>
+                      {genHier && <td><input value={it.parent_value_key ?? ""} onChange={(e) => editProposed(i, { parent_value_key: e.target.value })} /></td>}
+                      <td className="tbl-x"><button type="button" className="del-btn" onClick={() => setProposed((s) => (s ? s.filter((_, idx) => idx !== i) : s))}>✕</button></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="row mini" style={{ marginTop: 6 }}>
+              <button className="add-btn" onClick={approveProposed}>اعتماد وحفظ ({proposed.length})</button>
+              <button className="del-btn" onClick={() => setProposed(null)}>إلغاء</button>
+              <span className="muted sm">المصدر: {proposed[0]?.source} · ثقة {proposed[0]?.confidence}</span>
+            </div>
+          </div>
+        )}
       </div>
 
       {lists.map((l) => (

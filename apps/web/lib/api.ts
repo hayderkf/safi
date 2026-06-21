@@ -127,11 +127,21 @@ export const updateUser = (
 ): Promise<AdminUser> => jsend("PATCH", `/users/${id}`, patch);
 export const deleteUser = (id: string): Promise<{ deleted: string }> => jsend("DELETE", `/users/${id}`);
 
+export interface ProposedLookupItem {
+  value_key: string;
+  label: Translations;
+  parent_value_key?: string | null;
+  source?: string;
+  confidence?: number;
+}
 export const createLookupList = (key: string, label: Translations, description = ""): Promise<unknown> =>
   jpost("/lookups", { key, label, description });
-export const addLookupItems = (
-  key: string,
-  items: { value_key: string; label: Translations; parent_value_key?: string | null; source?: string }[]
-): Promise<unknown> => jpost(`/lookups/${encodeURIComponent(key)}/items`, { items });
+export const addLookupItems = (key: string, items: ProposedLookupItem[]): Promise<unknown> =>
+  jpost(`/lookups/${encodeURIComponent(key)}/items`, { items });
 export const deleteLookupList = (key: string): Promise<unknown> =>
   jsend("DELETE", `/lookups/${encodeURIComponent(key)}`);
+export const generateLookup = (
+  description: string,
+  hierarchical: boolean
+): Promise<{ ok: boolean; items: ProposedLookupItem[]; meta: any }> =>
+  jpost("/lookups/generate", { description, hierarchical });

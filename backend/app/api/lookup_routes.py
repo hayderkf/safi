@@ -13,6 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from ..auth.deps import require_permission
 from ..db.models import LookupItem, LookupList, User
 from ..db.session import get_session
+from ..forms.lookup_gen import generate_lookup_items
 
 router = APIRouter(prefix="/lookups", tags=["lookups"])
 
@@ -36,6 +37,11 @@ class ItemIn(BaseModel):
 
 class AddItemsRequest(BaseModel):
     items: list[ItemIn] = Field(default_factory=list)
+
+
+class GenerateLookupRequest(BaseModel):
+    description: str
+    hierarchical: bool = False
 
 
 def _item_dict(i: LookupItem) -> dict:
@@ -69,6 +75,15 @@ async def create_list(
     session.add(lst)
     await session.commit()
     return {"key": lst.key, "created": True}
+
+
+@router.post("/generate")
+async def generate_lookup(
+    req: GenerateLookupRequest,
+    _user: User = Depends(require_permission("lookups:write")),
+) -> dict:
+    """يقترح عناصر قائمة ساندة بالذكاء (لا يحفظ) — يراجعها المسؤول ويعتمدها."""
+    return await generate_lookup_items(req.description, req.hierarchical)
 
 
 @router.get("")
