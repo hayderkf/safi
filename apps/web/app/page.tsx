@@ -4,6 +4,12 @@ import type { FormField, Values } from "@/lib/types";
 import { generateForm, saveForm, submitForm } from "@/lib/api";
 import FormRenderer from "@/components/FormRenderer";
 
+// استمارة تجريبية لتأكيد ربط القوائم الساندة + التتالي (محافظة → قضاء)
+const DEMO_LOOKUP_IR: FormField[] = [
+  { id: "gov", type: "dropdownField", labelTranslations: { ar: "المحافظة" }, isRequired: true, dataSourceKey: "iraq_governorates" },
+  { id: "dist", type: "dropdownField", labelTranslations: { ar: "القضاء" }, isRequired: true, dataSourceKey: "iraq_districts", parentFieldId: "gov" },
+];
+
 export default function Home() {
   const [prompt, setPrompt] = useState(
     "استمارة تسجيل أسرة نازحة: الاسم، هل يوجد أطفال؟ (نعم/لا)، وإذا نعم أظهر عدد الأطفال (رقم). أضف تاريخ النزوح."
@@ -15,6 +21,13 @@ export default function Home() {
   const [meta, setMeta] = useState<any>(null);
 
   const onChange = (id: string, v: unknown) => setValues((s) => ({ ...s, [id]: v }));
+
+  function loadDemo() {
+    setMsg(null);
+    setMeta(null);
+    setValues({});
+    setFields(DEMO_LOOKUP_IR);
+  }
 
   async function gen() {
     setLoading(true);
@@ -58,6 +71,9 @@ export default function Home() {
         <div className="row" style={{ marginTop: 10 }}>
           <button onClick={gen} disabled={loading}>
             {loading ? "…جارٍ" : "توليد الاستمارة"}
+          </button>
+          <button type="button" className="add-btn" onClick={loadDemo} disabled={loading}>
+            تجربة قوائم ساندة (محافظة ← قضاء)
           </button>
           {meta && (
             <span className="meta">

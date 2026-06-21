@@ -88,3 +88,6 @@ button:disabled { opacity: .55; cursor: default; }
 .matrix th, .matrix .matrix-cell { text-align: center; }
 .matrix-rowlabel { font-weight: 600; white-space: nowrap; }
 .matrix-cell input { width: auto; }
+
+/* شارة الإسناد (نسيج الثقة) للبيانات الساندة */
+.prov-badge { display: inline-block; margin-top: 6px; font-size: 11px; color: var(--accent-d); background: #e1f5ee; padding: 2px 8px; border-radius: 999px; }

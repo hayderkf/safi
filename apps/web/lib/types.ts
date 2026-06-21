@@ -34,7 +34,10 @@ export interface FormField {
   labelTranslations?: Translations;
   isRequired?: boolean;
   options?: Option[];
-  dataSourceKey?: string;
+  dataSourceKey?: string;       // إسناد لقائمة ساندة بدل options ثابتة
+  displayField?: string;        // مفتاح العرض داخل عنصر القائمة (افتراضياً label)
+  valueField?: string;          // مفتاح القيمة (افتراضياً value_key)
+  parentFieldId?: string;       // للتتالي الهرمي (قيمة هذا الحقل تُرشّح القائمة)
   subFields?: FormField[];
   layout?: string;
   isRepeating?: boolean;

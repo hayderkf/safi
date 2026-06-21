@@ -1,10 +1,12 @@
 "use client";
 // مُصيِّر الاستمارة الديناميكي: يبني الواجهة من مخطط IR + يقيّم المنطق الشرطي.
-// يدعم: الحقول الأساسية + الاختيار + المجموعات (صفحة/متكرّر حقيقي) + جدول + مصفوفة
-// + range/rate/file/image/signature/map/qrcode. النطاقات المتداخلة عبر تمرير values/onChange محليّين.
+// يدعم: الحقول الأساسية + الاختيار (ثابت أو مُسنَد لقائمة ساندة) + المجموعات (صفحة/متكرّر حقيقي)
+// + جدول + مصفوفة + range/rate/file/image/signature/map/qrcode. النطاقات المتداخلة عبر تمرير values/onChange محليّين.
+import { useEffect, useState } from "react";
 import type { Column, FormField, MatrixRow, Option, Values } from "@/lib/types";
 import { label } from "@/lib/types";
 import { isRequired, isVisible } from "@/lib/rules";
+import { getLookup, type LookupItem } from "@/lib/api";
 import SignaturePad from "@/components/SignaturePad";
 
 const optLabel = (o: Option) => o.valueTranslations?.ar || o.valueTranslations?.en || o.valueKey;
@@ -64,6 +66,12 @@ function FieldView({
         <div className="note">{lab}</div>
       </div>
     );
+  }
+
+  // حقل اختيار مُسنَد لقائمة ساندة (dataSourceKey) — يجلب خياراته من الخادم بدل options الثابتة
+  const isChoice = f.type === "dropdownField" || f.type === "radioField" || f.type === "checkboxField";
+  if (isChoice && f.dataSourceKey) {
+    return <LookupChoice f={f} v={v} values={values} onChange={onChange} lab={lab} req={req} />;
   }
 
   const Lbl = () => (
@@ -492,6 +500,147 @@ function MatrixField({
           </tbody>
         </table>
       </div>
+    </div>
+  );
+}
+
+// ---- حقل اختيار مُسنَد لقائمة ساندة: يجلب الخيارات من /lookups/{key} مع التتالي والإسناد ----
+function LookupChoice({
+  f,
+  v,
+  values,
+  onChange,
+  lab,
+  req,
+}: {
+  f: FormField;
+  v: unknown;
+  values: Values;
+  onChange: (id: string, v: unknown) => void;
+  lab: string;
+  req: boolean;
+}) {
+  const parentVal = f.parentFieldId ? values[f.parentFieldId] : undefined;
+  const parentStr = typeof parentVal === "string" && parentVal !== "" ? parentVal : undefined;
+  const blocked = !!f.parentFieldId && !parentStr; // ينتظر اختيار الأب
+  const [items, setItems] = useState<LookupItem[]>([]);
+  const [err, setErr] = useState(false);
+
+  useEffect(() => {
+    if (!f.dataSourceKey || blocked) {
+      setItems([]);
+      return;
+    }
+    let active = true;
+    setErr(false);
+    getLookup(f.dataSourceKey, parentStr)
+      .then((r) => active && setItems(r.items || []))
+      .catch(() => {
+        if (active) {
+          setItems([]);
+          setErr(true);
+        }
+      });
+    return () => {
+      active = false;
+    };
+  }, [f.dataSourceKey, parentStr, blocked]);
+
+  // إعادة ضبط القيمة إن لم تعد ضمن الخيارات (تتالٍ: تغيّر الأب يُبطل اختيار الابن)
+  useEffect(() => {
+    if (blocked) {
+      if (v != null && v !== "") onChange(f.id, f.type === "checkboxField" ? [] : "");
+      return;
+    }
+    if (!items.length) return;
+    const keys = new Set(items.map((i) => i.value_key));
+    if (f.type === "checkboxField") {
+      const arr = Array.isArray(v) ? (v as string[]) : [];
+      const kept = arr.filter((x) => keys.has(x));
+      if (kept.length !== arr.length) onChange(f.id, kept);
+    } else if (typeof v === "string" && v !== "" && !keys.has(v)) {
+      onChange(f.id, "");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [items, blocked]);
+
+  const Lbl = () => (
+    <label>
+      {lab}
+      {req && <span className="req"> *</span>}
+    </label>
+  );
+  const itemLabel = (i: LookupItem) => i.label?.ar || i.label?.en || i.value_key;
+  const src = items[0]?.source;
+  const Badge = () =>
+    items.length ? (
+      <span className="prov-badge" title="مصدر البيانات الساندة (نسيج الثقة)">
+        ⛓︎ {src ? `مصدر: ${src}` : "قائمة ساندة"} · {items.length} عنصر
+      </span>
+    ) : null;
+
+  if (blocked)
+    return (
+      <div className="field">
+        <Lbl />
+        <div className="todo">اختر القيمة الأب أولاً لعرض الخيارات.</div>
+      </div>
+    );
+  if (err)
+    return (
+      <div className="field">
+        <Lbl />
+        <div className="todo">تعذّر جلب القائمة الساندة: {f.dataSourceKey}</div>
+      </div>
+    );
+
+  if (f.type === "dropdownField")
+    return (
+      <div className="field">
+        <Lbl />
+        <select value={(v as string) ?? ""} onChange={(e) => onChange(f.id, e.target.value)}>
+          <option value="">—</option>
+          {items.map((i) => (
+            <option key={i.value_key} value={i.value_key}>
+              {itemLabel(i)}
+            </option>
+          ))}
+        </select>
+        <Badge />
+      </div>
+    );
+
+  if (f.type === "radioField")
+    return (
+      <div className="field">
+        <Lbl />
+        <div className="opts">
+          {items.map((i) => (
+            <label key={i.value_key}>
+              <input type="radio" name={f.id} checked={v === i.value_key} onChange={() => onChange(f.id, i.value_key)} />
+              {itemLabel(i)}
+            </label>
+          ))}
+        </div>
+        <Badge />
+      </div>
+    );
+
+  // checkboxField
+  const arr = Array.isArray(v) ? (v as string[]) : [];
+  const toggle = (k: string) => onChange(f.id, arr.includes(k) ? arr.filter((x) => x !== k) : [...arr, k]);
+  return (
+    <div className="field">
+      <Lbl />
+      <div className="opts">
+        {items.map((i) => (
+          <label key={i.value_key}>
+            <input type="checkbox" checked={arr.includes(i.value_key)} onChange={() => toggle(i.value_key)} />
+            {itemLabel(i)}
+          </label>
+        ))}
+      </div>
+      <Badge />
     </div>
   );
 }
