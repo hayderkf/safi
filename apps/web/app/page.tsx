@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import Link from "next/link";
 import type { FormField, Values } from "@/lib/types";
 import { generateForm, saveForm, submitForm } from "@/lib/api";
 import FormRenderer from "@/components/FormRenderer";
@@ -63,7 +64,10 @@ export default function Home() {
 
   return (
     <main className="wrap">
-      <h1>Safi — توليد الاستمارات</h1>
+      <div className="row" style={{ justifyContent: "space-between" }}>
+        <h1>Safi — توليد الاستمارات</h1>
+        <Link href="/builder" className="navlink">الباني المرئي ←</Link>
+      </div>
       <div className="sub">اكتب وصفاً عربياً للاستمارة، ثم ولّدها واملأها وأرسلها.</div>
 
       <div className="card">

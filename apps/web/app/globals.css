@@ -91,3 +91,39 @@ button:disabled { opacity: .55; cursor: default; }
 
 /* شارة الإسناد (نسيج الثقة) للبيانات الساندة */
 .prov-badge { display: inline-block; margin-top: 6px; font-size: 11px; color: var(--accent-d); background: #e1f5ee; padding: 2px 8px; border-radius: 999px; }
+
+/* ====== الباني المرئي ====== */
+.builder-wrap { max-width: 1240px; }
+.navlink { color: var(--accent-d); font-size: 13px; text-decoration: none; font-weight: 600; }
+.muted { color: var(--muted); }
+.sm { font-size: 12px; }
+.builder-grid { display: grid; grid-template-columns: 280px 1fr 380px; gap: 14px; align-items: start; }
+@media (max-width: 1000px) { .builder-grid { grid-template-columns: 1fr; } }
+.builder-col { margin-bottom: 0; }
+.col-title { font-weight: 700; font-size: 14px; margin-bottom: 10px; }
+.palette { display: flex; flex-wrap: wrap; gap: 6px; }
+.pal-btn { background: #f1efe8; color: var(--text); padding: 5px 10px; font-size: 12px; font-weight: 500; }
+.pal-btn:hover { background: #e6e3da; }
+
+/* شجرة الحقول */
+.ftree { display: flex; flex-direction: column; gap: 4px; }
+.frow { display: flex; align-items: center; justify-content: space-between; gap: 6px; border: 1px solid var(--border); border-radius: 8px; padding: 4px 6px; background: #fcfcfb; }
+.frow.sel { border-color: var(--accent); background: #f0faf6; }
+.fname { background: none; color: var(--text); padding: 4px 2px; font-weight: 500; font-size: 13px; text-align: start; flex: 1; display: flex; align-items: center; gap: 6px; }
+.fname:hover { background: none; }
+.ftype { font-size: 10px; color: var(--muted); background: #eee; padding: 1px 6px; border-radius: 999px; }
+.facts { display: flex; gap: 2px; }
+.facts button { background: none; color: var(--muted); padding: 2px 6px; font-size: 13px; }
+.facts button:hover { background: #eee; }
+.del-x { color: #993c1d !important; }
+
+/* محرّر الخصائص */
+.editor { display: flex; flex-direction: column; gap: 10px; }
+.efield { display: flex; flex-direction: column; gap: 4px; flex: 1; }
+.efield > label { font-size: 12px; font-weight: 600; color: var(--muted); }
+.chk { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 500; }
+.chk input { width: auto; }
+.sect { border: 1px solid var(--border); border-radius: 8px; padding: 10px; background: #fcfcfb; }
+.sect-title { font-size: 12px; font-weight: 700; color: var(--accent-d); margin-bottom: 8px; }
+.row.mini { gap: 6px; margin-bottom: 6px; }
+.row.mini input, .row.mini select { padding: 6px 8px; font-size: 13px; }

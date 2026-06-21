@@ -27,6 +27,14 @@ export async function saveForm(title: string, ir: FormField[], source_prompt = "
   return jpost("/forms", { title, ir, source_prompt });
 }
 
+export async function listForms(): Promise<{ id: string; title: string; field_count: number }[]> {
+  return jget("/forms");
+}
+
+export async function getForm(id: string): Promise<{ id: string; title: string; ir: FormField[] }> {
+  return jget(`/forms/${id}`);
+}
+
 export async function submitForm(formId: string, data: Values): Promise<{ id: string }> {
   return jpost(`/forms/${formId}/submissions`, { data });
 }
@@ -47,4 +55,10 @@ export async function getLookup(
 ): Promise<{ key: string; label?: Translations; items: LookupItem[] }> {
   const q = parent != null ? `?parent=${encodeURIComponent(parent)}` : "";
   return jget(`/lookups/${encodeURIComponent(key)}${q}`);
+}
+
+export async function getLookups(): Promise<
+  { key: string; label?: Translations; description?: string; item_count: number }[]
+> {
+  return jget("/lookups");
 }

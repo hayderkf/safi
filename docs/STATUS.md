@@ -12,6 +12,7 @@
 - **الواجهة (Next.js، 3601):** صفحة تولّد استمارة، تعرضها كنموذج حيّ (RTL)، تعبّئها وتحفظها.
   - المُصيِّر يدعم **مجموعة الأنواع الكاملة**: text, integer/double/number, date/datetime/time, dropdown, radio, checkbox, note + range, rate, file/image/audio/video, signature (canvas), map (lat/lng + تحديد الموقع), qrcode + **جدول** (`tableField` صفوف ديناميكية بأعمدة مُنمّطة) + **مصفوفة** (`matrixField` single/multiple) + **التكرار الحقيقي** (`groupField isRepeating` كمصفوفة نطاقات بإضافة/حذف) + **المنطق الشرطي** (`visibilityWhen`/`requiredWhen`).
   - **ربط القوائم الساندة:** حقل الاختيار الذي يحمل `dataSourceKey` يجلب خياراته من `/lookups` (مع التتالي عبر `parentFieldId`) ويعرض **شارة الإسناد** (المصدر + العدد). زرّ «تجربة قوائم ساندة» في الصفحة يحمّل استمارة محافظة←قضاء للتأكّد البصري.
+  - **الباني المرئي (`/builder`):** لوحة أنواع + شجرة حقول (مجموعات متداخلة، إعادة ترتيب/حذف) + محرّر خصائص كامل (عنوان/إلزام/خيارات ثابتة أو **ربط قائمة ساندة + تتالٍ**/أعمدة جدول/صفوف مصفوفة/شرط رؤية) + **معاينة حيّة**. يبدأ فارغاً أو من توليد AI أو بتحميل استمارة محفوظة، ويحفظ عبر `/forms`.
 
 ## التشغيل
 - `bash ~/Documents/Safi/start.sh` (تشغيل) · `bash ~/Documents/Safi/stop.sh` (إيقاف).
@@ -20,14 +21,15 @@
 
 ## خريطة الملفات
 - `backend/app/ai/provider.py` تجريد المزوّد · `ai/prompts.py` العقد · `forms/ir.py` نماذج IR · `forms/generate.py` التوليد+الإصلاح · `db/models.py` الجداول (forms/submissions + lookup_lists/lookup_items) · `db/seed.py` بذور القوائم · `api/routes.py` التوليد · `api/store_routes.py` الحفظ · `api/lookup_routes.py` البيانات الساندة.
-- `apps/web/lib/{types,rules,api}.ts` · `components/{FormRenderer,SignaturePad}.tsx` · `app/page.tsx`.
+- `apps/web/lib/{types,rules,api,builder}.ts` · `components/{FormRenderer,SignaturePad}.tsx` · `app/page.tsx` (التوليد) · `app/builder/page.tsx` (الباني).
 - `ai/poc/` نتائج إثبات المفهوم (مرجع).
 
 ## التالي (اختر من BUILD_PLAN)
 - ✅ **توسعة المُصيِّر — منجز** (range/rate/file/image/signature/map/qrcode + جدول + مصفوفة + التكرار الحقيقي). فرع `feat/renderer-expansion`.
 - ✅ **البيانات الساندة والإسناد (المرحلة ٤) — منجز** (قوائم + عناصر بإسناد + تتالٍ + ربط الواجهة + شارة الإسناد). نفس الفرع.
-- **الباني المرئي للاستمارات — التالي المقترح:** محرّر سحب وإفلات (الويب) لتحرير الـ IR يدوياً (وفيه يُسنَد `dataSourceKey` للحقول).
-- **المرحلة ٥:** الهوية والصلاحيات (RBAC) وسير المراجعة.
+- ✅ **الباني المرئي للاستمارات — منجز** (`/builder`: لوحة + شجرة + محرّر خصائص + ربط القوائم + معاينة + حفظ/تحميل/بدء بـ AI). نفس الفرع.
+- **المرحلة ٥ — التالي:** الهوية والصلاحيات (RBAC) وسير المراجعة (اعتماد متعدد المستويات).
+- **تحسينات الباني (لاحقاً):** سحب وإفلات فعلي، تحرير `requiredWhen`/`enabledWhen`، تحديث المراجع تلقائياً عند تغيير المعرّف، تحرير `subFields` بسحبها بين المجموعات.
 
 ## بنود مفتوحة / ملاحظات
 - **بناء بنيوي محسّن:** الانتقال إلى **structured output (JSON schema)** + few-shot لضمان مخرَج صالح دائماً (حالياً نعتمد التحقّق + حلقة الإصلاح).
