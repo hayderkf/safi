@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(/usr/bin/grep -n \"FieldTree\\\\|moveById\\(fields\\\\|onMove\\\\|function FieldTree\" app/builder/page.tsx)"
+    ]
+  }
+}

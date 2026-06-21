@@ -142,6 +142,36 @@ export function lintForm(fields: FormField[]): LintIssue[] {
   return issues;
 }
 
+// ---- السحب والإفلات: نقل عقدة قبل/بعد هدف أو داخله (مجموعة) ----
+export type DropPos = "before" | "after" | "inside";
+
+function containsId(node: FormField, id: string): boolean {
+  if (node.id === id) return true;
+  return (node.subFields || []).some((c) => containsId(c, id));
+}
+
+function insertRelative(fields: FormField[], targetId: string, node: FormField, pos: DropPos): FormField[] {
+  const out: FormField[] = [];
+  for (const f of fields) {
+    if (f.id === targetId) {
+      if (pos === "before") out.push(node, f);
+      else if (pos === "after") out.push(f, node);
+      else out.push({ ...f, subFields: [...(f.subFields || []), node] }); // inside
+      continue;
+    }
+    out.push(f.subFields ? { ...f, subFields: insertRelative(f.subFields, targetId, node, pos) } : f);
+  }
+  return out;
+}
+
+export function moveNode(fields: FormField[], dragId: string, targetId: string, pos: DropPos): FormField[] {
+  if (dragId === targetId) return fields;
+  const dragged = findById(fields, dragId);
+  if (!dragged) return fields;
+  if (containsId(dragged, targetId)) return fields; // منع الإفلات داخل الذات/الذرّية
+  return insertRelative(removeById(fields, dragId), targetId, dragged, pos);
+}
+
 // كل الحقول مسطّحة (للإشارة في القواعد/التتالي) عدا معرّف مستثنى
 export function flatten(fields: FormField[], excludeId?: string): FormField[] {
   const out: FormField[] = [];

@@ -17,8 +17,10 @@ import {
   lintForm,
   makeField,
   moveById,
+  moveNode,
   removeById,
   updateById,
+  type DropPos,
 } from "@/lib/builder";
 
 type Lookup = { key: string; label?: { ar?: string; en?: string }; item_count: number };
@@ -45,6 +47,12 @@ export default function BuilderPage() {
   const selected = selectedId ? findById(fields, selectedId) : null;
   const addTarget = selected?.type === "groupField" ? selected.id : null;
   const issues = lintForm(fields);
+  const [dropHint, setDropHint] = useState<{ id: string; pos: DropPos } | null>(null);
+  const dnd = {
+    hint: dropHint,
+    setHint: setDropHint,
+    move: (dragId: string, targetId: string, pos: DropPos) => setFields(moveNode(fields, dragId, targetId, pos)),
+  };
 
   function add(type: string) {
     const f = makeField(type, fields);
@@ -199,7 +207,7 @@ export default function BuilderPage() {
           {fields.length === 0 ? (
             <div className="todo">لا حقول بعد — أضف من اللوحة.</div>
           ) : (
-            <FieldTree fields={fields} selectedId={selectedId} onSelect={setSelectedId} onMove={(id, d) => setFields(moveById(fields, id, d))} onRemove={remove} />
+            <FieldTree fields={fields} selectedId={selectedId} onSelect={setSelectedId} onMove={(id, d) => setFields(moveById(fields, id, d))} onRemove={remove} dnd={dnd} />
           )}
         </div>
 
@@ -234,12 +242,19 @@ export default function BuilderPage() {
 }
 
 // ---- شجرة الحقول ----
+interface Dnd {
+  hint: { id: string; pos: DropPos } | null;
+  setHint: (h: { id: string; pos: DropPos } | null) => void;
+  move: (dragId: string, targetId: string, pos: DropPos) => void;
+}
+
 function FieldTree({
   fields,
   selectedId,
   onSelect,
   onMove,
   onRemove,
+  dnd,
   depth = 0,
 }: {
   fields: FormField[];
@@ -247,28 +262,56 @@ function FieldTree({
   onSelect: (id: string) => void;
   onMove: (id: string, d: "up" | "down") => void;
   onRemove: (id: string) => void;
+  dnd: Dnd;
   depth?: number;
 }) {
   return (
     <div className="ftree">
-      {fields.map((f) => (
-        <div key={f.id}>
-          <div className={`frow${selectedId === f.id ? " sel" : ""}`} style={{ marginInlineStart: depth * 14 }}>
-            <button type="button" className="fname" onClick={() => onSelect(f.id)}>
-              <span className="ftype">{f.type.replace("Field", "")}</span>
-              {label(f) || <em className="muted">بلا عنوان</em>}
-            </button>
-            <div className="facts">
-              <button type="button" title="أعلى" onClick={() => onMove(f.id, "up")}>↑</button>
-              <button type="button" title="أسفل" onClick={() => onMove(f.id, "down")}>↓</button>
-              <button type="button" className="del-x" title="حذف" onClick={() => onRemove(f.id)}>✕</button>
+      {fields.map((f) => {
+        const isGroup = f.type === "groupField";
+        const hintPos = dnd.hint?.id === f.id ? dnd.hint.pos : null;
+        const onOver = (e: React.DragEvent) => {
+          e.preventDefault();
+          const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
+          const y = e.clientY - r.top;
+          let pos: DropPos = y < r.height / 2 ? "before" : "after";
+          if (isGroup && y > r.height * 0.3 && y < r.height * 0.7) pos = "inside";
+          dnd.setHint({ id: f.id, pos });
+        };
+        const onDrop = (e: React.DragEvent) => {
+          e.preventDefault();
+          const dragId = e.dataTransfer.getData("text/plain");
+          if (dragId) dnd.move(dragId, f.id, hintPos || "after");
+          dnd.setHint(null);
+        };
+        return (
+          <div key={f.id}>
+            <div
+              className={`frow${selectedId === f.id ? " sel" : ""}${hintPos ? ` drop-${hintPos}` : ""}`}
+              style={{ marginInlineStart: depth * 14 }}
+              draggable
+              onDragStart={(e) => { e.dataTransfer.setData("text/plain", f.id); e.dataTransfer.effectAllowed = "move"; }}
+              onDragOver={onOver}
+              onDrop={onDrop}
+              onDragEnd={() => dnd.setHint(null)}
+            >
+              <span className="drag-grip" title="اسحب لإعادة الترتيب">⠿</span>
+              <button type="button" className="fname" onClick={() => onSelect(f.id)}>
+                <span className="ftype">{f.type.replace("Field", "")}</span>
+                {label(f) || <em className="muted">بلا عنوان</em>}
+              </button>
+              <div className="facts">
+                <button type="button" title="أعلى" onClick={() => onMove(f.id, "up")}>↑</button>
+                <button type="button" title="أسفل" onClick={() => onMove(f.id, "down")}>↓</button>
+                <button type="button" className="del-x" title="حذف" onClick={() => onRemove(f.id)}>✕</button>
+              </div>
             </div>
+            {f.subFields && f.subFields.length > 0 && (
+              <FieldTree fields={f.subFields} selectedId={selectedId} onSelect={onSelect} onMove={onMove} onRemove={onRemove} dnd={dnd} depth={depth + 1} />
+            )}
           </div>
-          {f.subFields && f.subFields.length > 0 && (
-            <FieldTree fields={f.subFields} selectedId={selectedId} onSelect={onSelect} onMove={onMove} onRemove={onRemove} depth={depth + 1} />
-          )}
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
