@@ -1,0 +1,53 @@
+[
+    {
+        "id": "project_name",
+        "type": "textField",
+        "labelTranslations": {"ar": "اسم المشروع", "en": "Project Name"},
+        "isRequired": true
+    },
+    {
+        "id": "province",
+        "type": "dropdownField",
+        "labelTranslations": {"ar": "المحافظة", "en": "Province"},
+        "isRequired": true,
+        "options": [
+            {"valueKey":"k1","valueTranslations":{"ar":"محافظة أ","en":"Province A"}},
+            {"valueKey":"k2","valueTranslations":{"ar":"محافظة ب","en":"Province B"}}
+        ]
+    },
+    {
+        "id": "number_of_beneficiaries",
+        "type": "integerField",
+        "labelTranslations": {"ar": "عدد المستفيدين", "en": "Number of Beneficiaries"},
+        "isRequired": true
+    },
+    {
+        "id": "well_status",
+        "type": "radioField",
+        "labelTranslations": {"ar": "حالة البئر", "en": "Well Status"},
+        "isRequired": true,
+        "options": [
+            {"valueKey":"working","valueTranslations":{"ar":"يعمل","en":"Working"}},
+            {"valueKey":"stopped","valueTranslations":{"ar":"متوقف","en":"Stopped"}},
+            {"valueKey":"under_construction","valueTranslations":{"ar":"قيد الإنشاء","en":"Under Construction"}}
+        ]
+    },
+    {
+        "id": "well_image",
+        "type": "imageField",
+        "labelTranslations": {"ar": "صورة للبئر", "en": "Well Image"},
+        "isRequired": true
+    },
+    {
+        "id": "geographical_location",
+        "type": "mapField",
+        "labelTranslations": {"ar": "الموقع الجغرافي", "en": "Geographical Location"},
+        "isRequired": false
+    },
+    {
+        "id": "notes",
+        "type": "noteField",
+        "labelTranslations": {"ar": "ملاحظات", "en": "Notes"},
+        "isRequired": false
+    }
+]

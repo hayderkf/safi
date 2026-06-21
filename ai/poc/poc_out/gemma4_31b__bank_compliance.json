@@ -1,0 +1,128 @@
+[
+  {
+    "id": "bank_name",
+    "type": "textField",
+    "labelTranslations": {
+      "ar": "اسم المصرف",
+      "en": "Bank Name"
+    },
+    "isRequired": true
+  },
+  {
+    "id": "offers_payment_cards",
+    "type": "radioField",
+    "labelTranslations": {
+      "ar": "هل يقدّم بطاقات دفع؟",
+      "en": "Does it offer payment cards?"
+    },
+    "isRequired": true,
+    "options": [
+      {
+        "valueKey": "yes",
+        "valueTranslations": {
+          "ar": "نعم",
+          "en": "Yes"
+        }
+      },
+      {
+        "valueKey": "no",
+        "valueTranslations": {
+          "ar": "لا",
+          "en": "No"
+        }
+      }
+    ]
+  },
+  {
+    "id": "card_types",
+    "type": "checkboxField",
+    "labelTranslations": {
+      "ar": "نوع البطاقات",
+      "en": "Card Types"
+    },
+    "isRequired": false,
+    "visibilityWhen": {
+      "mode": "all",
+      "rules": [
+        {
+          "sourceFieldId": "offers_payment_cards",
+          "operator": "==",
+          "triggerValue": "yes"
+        }
+      ]
+    },
+    "options": [
+      {
+        "valueKey": "credit",
+        "valueTranslations": {
+          "ar": "ائتمان",
+          "en": "Credit"
+        }
+      },
+      {
+        "valueKey": "debit",
+        "valueTranslations": {
+          "ar": "خصم",
+          "en": "Debit"
+        }
+      },
+      {
+        "valueKey": "prepaid",
+        "valueTranslations": {
+          "ar": "مسبقة الدفع",
+          "en": "Prepaid"
+        }
+      }
+    ]
+  },
+  {
+    "id": "active_accounts_count",
+    "type": "integerField",
+    "labelTranslations": {
+      "ar": "عدد الحسابات النشطة",
+      "en": "Number of Active Accounts"
+    },
+    "isRequired": true
+  },
+  {
+    "id": "compliance_level",
+    "type": "dropdownField",
+    "labelTranslations": {
+      "ar": "مستوى الالتزام",
+      "en": "Compliance Level"
+    },
+    "isRequired": true,
+    "options": [
+      {
+        "valueKey": "compliant",
+        "valueTranslations": {
+          "ar": "ممتثل",
+          "en": "Compliant"
+        }
+      },
+      {
+        "valueKey": "partial",
+        "valueTranslations": {
+          "ar": "جزئي",
+          "en": "Partial"
+        }
+      },
+      {
+        "valueKey": "non_compliant",
+        "valueTranslations": {
+          "ar": "غير ممتثل",
+          "en": "Non-compliant"
+        }
+      }
+    ]
+  },
+  {
+    "id": "auditor_notes",
+    "type": "noteField",
+    "labelTranslations": {
+      "ar": "ملاحظات المدقّق",
+      "en": "Auditor Notes"
+    },
+    "isRequired": false
+  }
+]

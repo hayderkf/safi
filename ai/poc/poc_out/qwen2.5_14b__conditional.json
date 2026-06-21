@@ -1,0 +1,44 @@
+[
+    {
+        "id": "family-name",
+        "type": "textField",
+        "labelTranslations": {"ar": "الاسم", "en": "Name"},
+        "isRequired": true
+    },
+    {
+        "id": "have-children",
+        "type": "radioField",
+        "labelTranslations": {"ar": "هل يوجد أطفال؟", "en": "Do you have children?"},
+        "isRequired": true,
+        "options": [
+            {"valueKey":"yes","valueTranslations":{"ar":"نعم","en":"Yes"}},
+            {"valueKey":"no","valueTranslations":{"ar":"لا","en":"No"}}
+        ]
+    },
+    {
+        "id": "number-of-children",
+        "type": "integerField",
+        "labelTranslations": {"ar": "عدد الأطفال", "en": "Number of children"},
+        "isRequired": false,
+        "visibilityWhen": {"mode":"all","rules":[{"sourceFieldId":"have-children","operator":"==","triggerValue":"yes"}]}
+    },
+    {
+        "id": "ages-of-children",
+        "type": "textField",
+        "labelTranslations": {"ar": "أعمارهم", "en": "Their ages"},
+        "isRequired": false,
+        "visibilityWhen": {"mode":"all","rules":[{"sourceFieldId":"have-children","operator":"==","triggerValue":"yes"}]}
+    },
+    {
+        "id": "date-of-displacement",
+        "type": "dateField",
+        "labelTranslations": {"ar": "تاريخ النزوح", "en": "Date of displacement"},
+        "isRequired": true
+    },
+    {
+        "id": "current-place-of-residence",
+        "type": "textField",
+        "labelTranslations": {"ar": "مكان الإقامة الحالي", "en": "Current place of residence"},
+        "isRequired": true
+    }
+]

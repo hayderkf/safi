@@ -1,0 +1,117 @@
+[
+  {
+    "id": "centerName",
+    "type": "textField",
+    "labelTranslations": {
+      "ar": "اسم المركز",
+      "en": "Center Name"
+    },
+    "isRequired": true
+  },
+  {
+    "id": "monthlyStatsTable",
+    "type": "tableField",
+    "labelTranslations": {
+      "ar": "الأرقام الشهرية",
+      "en": "Monthly Numbers"
+    },
+    "isRequired": true,
+    "columns": [
+      {
+        "key": "month",
+        "type": "textField",
+        "labelTranslations": {
+          "ar": "الشهر",
+          "en": "Month"
+        }
+      },
+      {
+        "key": "visitsCount",
+        "type": "integerField",
+        "labelTranslations": {
+          "ar": "عدد الزيارات",
+          "en": "Number of Visits"
+        }
+      },
+      {
+        "key": "beneficiariesCount",
+        "type": "integerField",
+        "labelTranslations": {
+          "ar": "عدد المستفيدين",
+          "en": "Number of Beneficiaries"
+        }
+      },
+      {
+        "key": "cost",
+        "type": "doubleField",
+        "labelTranslations": {
+          "ar": "الكلفة",
+          "en": "Cost"
+        }
+      }
+    ]
+  },
+  {
+    "id": "performanceEvaluation",
+    "type": "matrixField",
+    "labelTranslations": {
+      "ar": "تقييم المعايير",
+      "en": "Criteria Evaluation"
+    },
+    "isRequired": true,
+    "matrixMode": "single",
+    "matrixRows": [
+      {
+        "key": "quality",
+        "labelTranslations": {
+          "ar": "الجودة",
+          "en": "Quality"
+        }
+      },
+      {
+        "key": "timeliness",
+        "labelTranslations": {
+          "ar": "الالتزام بالوقت",
+          "en": "Timeliness"
+        }
+      },
+      {
+        "key": "satisfaction",
+        "labelTranslations": {
+          "ar": "رضا المستفيدين",
+          "en": "Beneficiary Satisfaction"
+        }
+      }
+    ],
+    "options": [
+      {
+        "valueKey": "weak",
+        "valueTranslations": {
+          "ar": "ضعيف",
+          "en": "Weak"
+        }
+      },
+      {
+        "valueKey": "medium",
+        "valueTranslations": {
+          "ar": "متوسط",
+          "en": "Medium"
+        }
+      },
+      {
+        "valueKey": "good",
+        "valueTranslations": {
+          "ar": "جيد",
+          "en": "Good"
+        }
+      },
+      {
+        "valueKey": "excellent",
+        "valueTranslations": {
+          "ar": "ممتاز",
+          "en": "Excellent"
+        }
+      }
+    ]
+  }
+]

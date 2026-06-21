@@ -1,0 +1,56 @@
+[
+    {
+        "id": "bankName",
+        "type": "textField",
+        "labelTranslations": {"ar": "اسم المصرف", "en": "Bank Name"},
+        "isRequired": true
+    },
+    {
+        "id": "offersCards",
+        "type": "radioField",
+        "labelTranslations": {"ar": "هل يقدّم بطاقات دفع؟", "en": "Does it offer payment cards?"},
+        "isRequired": true,
+        "options": [
+            {"valueKey":"yes","valueTranslations":{"ar":"نعم","en":"Yes"}},
+            {"valueKey":"no","valueTranslations":{"ar":"لا","en":"No"}}
+        ]
+    },
+    {
+        "id": "cardTypes",
+        "type": "checkboxField",
+        "labelTranslations": {"ar": "نوع البطاقات", "en": "Card Types"},
+        "isRequired": false,
+        "options": [
+            {"valueKey":"credit","valueTranslations":{"ar":"ائتمان","en":"Credit"}},
+            {"valueKey":"debit","valueTranslations":{"ar":"خصم","en":"Debit"}},
+            {"valueKey":"prepaid","valueTranslations":{"ar":"مسبقة الدفع","en":"Prepaid"}}
+        ],
+        "visibilityWhen": {
+            "mode": "all",
+            "rules": [{"sourceFieldId":"offersCards","operator":"==","triggerValue":"yes"}]
+        }
+    },
+    {
+        "id": "activeAccountsNumber",
+        "type": "integerField",
+        "labelTranslations": {"ar": "عدد الحسابات النشطة", "en": "Number of Active Accounts"},
+        "isRequired": false
+    },
+    {
+        "id": "complianceLevel",
+        "type": "dropdownField",
+        "labelTranslations": {"ar": "مستوى الالتزام", "en": "Compliance Level"},
+        "isRequired": true,
+        "options": [
+            {"valueKey":"fully","valueTranslations":{"ar":"ممتثل","en":"Fully"}},
+            {"valueKey":"partially","valueTranslations":{"ar":"جزئي","en":"Partially"}},
+            {"valueKey":"noncompliant","valueTranslations":{"ar":"غير ممتثل","en":"Non-compliant"}}
+        ]
+    },
+    {
+        "id": "auditorNotes",
+        "type": "noteField",
+        "labelTranslations": {"ar": "ملاحظات المدقّق", "en": "Auditor Notes"},
+        "isRequired": false
+    }
+]

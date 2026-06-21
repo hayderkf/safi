@@ -1,0 +1,160 @@
+[
+  {
+    "id": "step_project_info",
+    "type": "groupField",
+    "layout": "step",
+    "labelTranslations": {
+      "ar": "معلومات المشروع",
+      "en": "Project Information"
+    },
+    "subFields": [
+      {
+        "id": "project_name",
+        "type": "textField",
+        "labelTranslations": {
+          "ar": "اسم المشروع",
+          "en": "Project Name"
+        },
+        "isRequired": true
+      },
+      {
+        "id": "governorate",
+        "type": "textField",
+        "labelTranslations": {
+          "ar": "المحافظة",
+          "en": "Governorate"
+        },
+        "isRequired": true
+      },
+      {
+        "id": "start_date",
+        "type": "dateField",
+        "labelTranslations": {
+          "ar": "تاريخ البدء",
+          "en": "Start Date"
+        },
+        "isRequired": true
+      }
+    ]
+  },
+  {
+    "id": "step_indicators",
+    "type": "groupField",
+    "layout": "step",
+    "labelTranslations": {
+      "ar": "المؤشرات",
+      "en": "Indicators"
+    },
+    "subFields": [
+      {
+        "id": "beneficiaries_count",
+        "type": "integerField",
+        "labelTranslations": {
+          "ar": "عدد المستفيدين",
+          "en": "Number of Beneficiaries"
+        },
+        "isRequired": true
+      },
+      {
+        "id": "completion_rate",
+        "type": "doubleField",
+        "labelTranslations": {
+          "ar": "نسبة الإنجاز",
+          "en": "Completion Rate"
+        },
+        "isRequired": true
+      },
+      {
+        "id": "project_status",
+        "type": "radioField",
+        "labelTranslations": {
+          "ar": "حالة المشروع",
+          "en": "Project Status"
+        },
+        "isRequired": true,
+        "options": [
+          {
+            "valueKey": "ongoing",
+            "valueTranslations": {
+              "ar": "جارٍ",
+              "en": "Ongoing"
+            }
+          },
+          {
+            "valueKey": "stopped",
+            "valueTranslations": {
+              "ar": "متوقف",
+              "en": "Stopped"
+            }
+          },
+          {
+            "valueKey": "completed",
+            "valueTranslations": {
+              "ar": "منجز",
+              "en": "Completed"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "step_recommendations",
+    "type": "groupField",
+    "layout": "step",
+    "labelTranslations": {
+      "ar": "التوصيات",
+      "en": "Recommendations"
+    },
+    "subFields": [
+      {
+        "id": "general_evaluation",
+        "type": "radioField",
+        "labelTranslations": {
+          "ar": "التقييم العام",
+          "en": "General Evaluation"
+        },
+        "isRequired": true,
+        "options": [
+          {
+            "valueKey": "weak",
+            "valueTranslations": {
+              "ar": "ضعيف",
+              "en": "Weak"
+            }
+          },
+          {
+            "valueKey": "medium",
+            "valueTranslations": {
+              "ar": "متوسط",
+              "en": "Medium"
+            }
+          },
+          {
+            "valueKey": "good",
+            "valueTranslations": {
+              "ar": "جيد",
+              "en": "Good"
+            }
+          },
+          {
+            "valueKey": "excellent",
+            "valueTranslations": {
+              "ar": "ممتاز",
+              "en": "Excellent"
+            }
+          }
+        ]
+      },
+      {
+        "id": "notes",
+        "type": "noteField",
+        "labelTranslations": {
+          "ar": "ملاحظات",
+          "en": "Notes"
+        },
+        "isRequired": false
+      }
+    ]
+  }
+]

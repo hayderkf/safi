@@ -1,0 +1,38 @@
+[
+    {
+        "id": "centerName",
+        "type": "textField",
+        "labelTranslations": {"ar": "اسم المركز", "en": "Center Name"},
+        "isRequired": true
+    },
+    {
+        "id": "monthlyNumbersTable",
+        "type": "tableField",
+        "labelTranslations": {"ar": "الأرقام الشهرية", "en": "Monthly Numbers"},
+        "columns": [
+            {"key": "month", "labelTranslations": {"ar": "الشهر", "en": "Month"}, "type": "textField"},
+            {"key": "visitsNumber", "labelTranslations": {"ar": "عدد الزيارات", "en": "Visits Number"}, "type": "integerField"},
+            {"key": "beneficiariesNumber", "labelTranslations": {"ar": "عدد المستفيدين", "en": "Beneficiaries Number"}, "type": "integerField"},
+            {"key": "cost", "labelTranslations": {"ar": "الكلفة", "en": "Cost"}, "type": "doubleField"}
+        ],
+        "isRequired": true
+    },
+    {
+        "id": "evaluationMatrix",
+        "type": "matrixField",
+        "labelTranslations": {"ar": "تقييم الأداء", "en": "Performance Evaluation"},
+        "matrixRows": [
+            {"key": "quality", "labelTranslations": {"ar": "الجودة", "en": "Quality"}},
+            {"key": "timeCommitment", "labelTranslations": {"ar": "التزام بالوقت", "en": "Time Commitment"}},
+            {"key": "beneficiarySatisfaction", "labelTranslations": {"ar": "رضا المستفيدين", "en": "Beneficiary Satisfaction"}}
+        ],
+        "options": [
+            {"valueKey": "weak", "valueTranslations": {"ar": "ضعيف", "en": "Weak"}},
+            {"valueKey": "average", "valueTranslations": {"ar": "متوسط", "en": "Average"}},
+            {"valueKey": "good", "valueTranslations": {"ar": "جيد", "en": "Good"}},
+            {"valueKey": "excellent", "valueTranslations": {"ar": "ممتاز", "en": "Excellent"}}
+        ],
+        "matrixMode": "single",
+        "isRequired": true
+    }
+]

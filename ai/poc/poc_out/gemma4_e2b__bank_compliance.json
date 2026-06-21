@@ -1,0 +1,118 @@
+[
+{
+"id": "bankName",
+"type": "textField",
+"labelTranslations": {
+"ar": "اسم المصرف",
+"en": "Bank Name"
+},
+"isRequired": true
+},
+{
+"id": "offersPaymentCards",
+"type": "radioField",
+"labelTranslations": {
+"ar": "هل يقدّم بطاقات دفع؟",
+"en": "Does it offer payment cards?"
+},
+"isRequired": true,
+"options": [
+{
+"valueKey": "yes",
+"valueTranslations": {
+"ar": "نعم",
+"en": "Yes"
+}
+},
+{
+"valueKey": "no",
+"valueTranslations": {
+"ar": "لا",
+"en": "No"
+}
+}
+]
+},
+{
+"id": "cardTypes",
+"type": "checkboxField",
+"labelTranslations": {
+"ar": "نوع البطاقات",
+"en": "Card Types"
+},
+"isRequired": true,
+"options": [
+{
+"valueKey": "credit",
+"valueTranslations": {
+"ar": "ائتمان",
+"en": "Credit"
+}
+},
+{
+"valueKey": "debit",
+"valueTranslations": {
+"ar": "خصم",
+"en": "Debit"
+}
+},
+{
+"valueKey": "prepaid",
+"valueTranslations": {
+"ar": "مسبقة الدفع",
+"en": "Prepaid"
+}
+}
+]
+},
+{
+"id": "activeAccounts",
+"type": "integerField",
+"labelTranslations": {
+"ar": "عدد الحسابات النشطة",
+"en": "Number of Active Accounts"
+},
+"isRequired": true
+},
+{
+"id": "complianceLevel",
+"type": "radioField",
+"labelTranslations": {
+"ar": "مستوى الالتزام",
+"en": "Compliance Level"
+},
+"isRequired": true,
+"options": [
+{
+"valueKey": "compliant",
+"valueTranslations": {
+"ar": "ممتثل",
+"en": "Compliant"
+}
+},
+{
+"valueKey": "partial",
+"valueTranslations": {
+"ar": "جزئي",
+"en": "Partial"
+}
+},
+{
+"valueKey": "nonCompliant",
+"valueTranslations": {
+"ar": "غير ممتثل",
+"en": "Non-compliant"
+}
+}
+]
+},
+{
+"id": "auditorNotes",
+"type": "noteField",
+"labelTranslations": {
+"ar": "ملاحظات المدقّق",
+"en": "Auditor's Notes"
+},
+"isRequired": false
+}
+]

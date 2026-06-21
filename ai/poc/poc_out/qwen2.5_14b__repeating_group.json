@@ -1,0 +1,56 @@
+[
+    {
+        "id": "familyHeadName",
+        "type": "textField",
+        "labelTranslations": {"ar": "اسم رب الأسرة", "en": "Family Head Name"},
+        "isRequired": true
+    },
+    {
+        "id": "familyHeadPhone",
+        "type": "textField",
+        "labelTranslations": {"ar": "رقم هاتف رب الأسرة", "en": "Family Head Phone Number"},
+        "isRequired": true
+    },
+    {
+        "id": "familyMembers",
+        "type": "groupField",
+        "isRepeating": true,
+        "subFields": [
+            {
+                "id": "memberName",
+                "type": "textField",
+                "labelTranslations": {"ar": "اسم العضو", "en": "Member Name"},
+                "isRequired": true
+            },
+            {
+                "id": "memberAge",
+                "type": "integerField",
+                "labelTranslations": {"ar": "عمر العضو", "en": "Member Age"},
+                "isRequired": true
+            },
+            {
+                "id": "memberRelation",
+                "type": "dropdownField",
+                "labelTranslations": {"ar": "صلة القرابة", "en": "Relationship"},
+                "isRequired": true,
+                "options": [
+                    {"valueKey":"husband","valueTranslations":{"ar":"زوج","en":"Husband"}},
+                    {"valueKey":"wife","valueTranslations":{"ar":"زوجة","en":"Wife"}},
+                    {"valueKey":"son","valueTranslations":{"ar":"ابن","en":"Son"}},
+                    {"valueKey":"daughter","valueTranslations":{"ar":"بنت","en":"Daughter"}},
+                    {"valueKey":"other","valueTranslations":{"ar":"أخرى","en":"Other"}}
+                ]
+            },
+            {
+                "id": "isStudent",
+                "type": "radioField",
+                "labelTranslations": {"ar": "هل يدرس؟", "en": "Is a Student?"},
+                "isRequired": true,
+                "options": [
+                    {"valueKey":"yes","valueTranslations":{"ar":"نعم","en":"Yes"}},
+                    {"valueKey":"no","valueTranslations":{"ar":"لا","en":"No"}}
+                ]
+            }
+        ]
+    }
+]

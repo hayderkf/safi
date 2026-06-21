@@ -1,0 +1,130 @@
+[
+  {
+    "id": "head_of_family_info",
+    "type": "groupField",
+    "labelTranslations": {
+      "ar": "معلومات رب الأسرة",
+      "en": "Head of Family Information"
+    },
+    "subFields": [
+      {
+        "id": "head_name",
+        "type": "textField",
+        "labelTranslations": {
+          "ar": "الاسم",
+          "en": "Name"
+        },
+        "isRequired": true
+      },
+      {
+        "id": "head_phone",
+        "type": "textField",
+        "labelTranslations": {
+          "ar": "رقم الهاتف",
+          "en": "Phone Number"
+        },
+        "isRequired": true
+      }
+    ]
+  },
+  {
+    "id": "family_members_section",
+    "type": "groupField",
+    "isRepeating": true,
+    "labelTranslations": {
+      "ar": "أفراد الأسرة",
+      "en": "Family Members"
+    },
+    "subFields": [
+      {
+        "id": "member_name",
+        "type": "textField",
+        "labelTranslations": {
+          "ar": "الاسم",
+          "en": "Name"
+        },
+        "isRequired": true
+      },
+      {
+        "id": "member_age",
+        "type": "integerField",
+        "labelTranslations": {
+          "ar": "العمر",
+          "en": "Age"
+        },
+        "isRequired": true
+      },
+      {
+        "id": "relationship",
+        "type": "dropdownField",
+        "labelTranslations": {
+          "ar": "صلة القرابة",
+          "en": "Relationship"
+        },
+        "isRequired": true,
+        "options": [
+          {
+            "valueKey": "husband",
+            "valueTranslations": {
+              "ar": "زوج",
+              "en": "Husband"
+            }
+          },
+          {
+            "valueKey": "wife",
+            "valueTranslations": {
+              "ar": "زوجة",
+              "en": "Wife"
+            }
+          },
+          {
+            "valueKey": "son",
+            "valueTranslations": {
+              "ar": "ابن",
+              "en": "Son"
+            }
+          },
+          {
+            "valueKey": "daughter",
+            "valueTranslations": {
+              "ar": "ابنة",
+              "en": "Daughter"
+            }
+          },
+          {
+            "valueKey": "other",
+            "valueTranslations": {
+              "ar": "أخرى",
+              "en": "Other"
+            }
+          }
+        ]
+      },
+      {
+        "id": "is_studying",
+        "type": "radioField",
+        "labelTranslations": {
+          "ar": "هل يدرس؟",
+          "en": "Is studying?"
+        },
+        "isRequired": true,
+        "options": [
+          {
+            "valueKey": "yes",
+            "valueTranslations": {
+              "ar": "نعم",
+              "en": "Yes"
+            }
+          },
+          {
+            "valueKey": "no",
+            "valueTranslations": {
+              "ar": "لا",
+              "en": "No"
+            }
+          }
+        ]
+      }
+    ]
+  }
+]
