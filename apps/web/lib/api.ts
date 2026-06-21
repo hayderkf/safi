@@ -1,22 +1,42 @@
 // عميل API للباك إند (FastAPI على 8601)
 import type { FormField, Translations, Values } from "./types";
+import { authHeaders, setSession, type SessionUser } from "./auth";
 
 const BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8601";
+
+function check(r: Response, path: string) {
+  if (r.ok) return;
+  if (r.status === 401 || r.status === 403) throw new Error("يتطلّب تسجيل الدخول (صلاحية ناقصة)");
+  throw new Error(`${path} → ${r.status}`);
+}
 
 async function jpost(path: string, body: unknown) {
   const r = await fetch(`${BASE}${path}`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...authHeaders() },
     body: JSON.stringify(body),
   });
-  if (!r.ok) throw new Error(`${path} → ${r.status}`);
+  check(r, path);
   return r.json();
 }
 
 async function jget(path: string) {
-  const r = await fetch(`${BASE}${path}`);
-  if (!r.ok) throw new Error(`${path} → ${r.status}`);
+  const r = await fetch(`${BASE}${path}`, { headers: { ...authHeaders() } });
+  check(r, path);
   return r.json();
+}
+
+// ---- المصادقة ----
+export async function login(username: string, password: string): Promise<SessionUser> {
+  const r = await fetch(`${BASE}/auth/login`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ username, password }),
+  });
+  if (!r.ok) throw new Error("بيانات الدخول غير صحيحة");
+  const d = await r.json();
+  setSession(d.access_token, d.user);
+  return d.user;
 }
 
 export async function generateForm(prompt: string): Promise<{ ok: boolean; fields: FormField[]; meta: any }> {

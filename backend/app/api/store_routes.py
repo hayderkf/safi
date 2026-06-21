@@ -8,7 +8,8 @@ from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ..db.models import Form, Submission
+from ..auth.deps import require_permission
+from ..db.models import Form, Submission, User
 from ..db.session import get_session
 
 router = APIRouter(prefix="/forms", tags=["forms-store"])
@@ -22,7 +23,11 @@ class SaveFormRequest(BaseModel):
 
 
 @router.post("")
-async def save_form(req: SaveFormRequest, session: AsyncSession = Depends(get_session)) -> dict:
+async def save_form(
+    req: SaveFormRequest,
+    session: AsyncSession = Depends(get_session),
+    _user: User = Depends(require_permission("forms:write")),
+) -> dict:
     form = Form(title=req.title, ir=req.ir, source_prompt=req.source_prompt)
     session.add(form)
     await session.commit()
@@ -56,7 +61,8 @@ class SubmitRequest(BaseModel):
 
 @router.post("/{form_id}/submissions")
 async def submit(form_id: uuid.UUID, req: SubmitRequest,
-                 session: AsyncSession = Depends(get_session)) -> dict:
+                 session: AsyncSession = Depends(get_session),
+                 _user: User = Depends(require_permission("submissions:write"))) -> dict:
     if not await session.get(Form, form_id):
         raise HTTPException(status_code=404, detail="الاستمارة غير موجودة")
     sub = Submission(form_id=form_id, data=req.data)

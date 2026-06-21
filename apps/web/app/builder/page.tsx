@@ -5,6 +5,7 @@ import Link from "next/link";
 import type { Column, FormField, Option, RuleGroup, Values } from "@/lib/types";
 import { label } from "@/lib/types";
 import FormRenderer from "@/components/FormRenderer";
+import AuthBar from "@/components/AuthBar";
 import { generateForm, getLookups, getForm, listForms, saveForm } from "@/lib/api";
 import {
   CHOICE_TYPES,
@@ -112,10 +113,11 @@ export default function BuilderPage() {
 
   return (
     <main className="wrap builder-wrap">
-      <div className="row" style={{ justifyContent: "space-between" }}>
-        <h1>Safi — الباني المرئي</h1>
+      <div className="topbar">
         <Link href="/" className="navlink">← التوليد</Link>
+        <AuthBar />
       </div>
+      <h1>Safi — الباني المرئي</h1>
       <div className="sub">أضف الحقول من اللوحة، حرّر خصائصها، وعاين مباشرةً. احفظ عند الجاهزية.</div>
 
       {/* شريط أدوات: عنوان + حفظ + بدء بـ AI + تحميل موجود */}

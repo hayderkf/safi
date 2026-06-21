@@ -92,6 +92,11 @@ button:disabled { opacity: .55; cursor: default; }
 /* شارة الإسناد (نسيج الثقة) للبيانات الساندة */
 .prov-badge { display: inline-block; margin-top: 6px; font-size: 11px; color: var(--accent-d); background: #e1f5ee; padding: 2px 8px; border-radius: 999px; }
 
+/* شريط علوي + شريط المصادقة */
+.topbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; padding-bottom: 10px; border-bottom: 1px solid var(--border); }
+.authbar { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+.authbar input { padding: 6px 9px; font-size: 13px; }
+
 /* ====== الباني المرئي ====== */
 .builder-wrap { max-width: 1240px; }
 .navlink { color: var(--accent-d); font-size: 13px; text-decoration: none; font-weight: 600; }

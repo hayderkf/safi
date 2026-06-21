@@ -4,6 +4,7 @@ import Link from "next/link";
 import type { FormField, Values } from "@/lib/types";
 import { generateForm, saveForm, submitForm } from "@/lib/api";
 import FormRenderer from "@/components/FormRenderer";
+import AuthBar from "@/components/AuthBar";
 
 // استمارة تجريبية لتأكيد ربط القوائم الساندة + التتالي (محافظة → قضاء)
 const DEMO_LOOKUP_IR: FormField[] = [
@@ -64,11 +65,12 @@ export default function Home() {
 
   return (
     <main className="wrap">
-      <div className="row" style={{ justifyContent: "space-between" }}>
-        <h1>Safi — توليد الاستمارات</h1>
+      <div className="topbar">
         <Link href="/builder" className="navlink">الباني المرئي ←</Link>
+        <AuthBar />
       </div>
-      <div className="sub">اكتب وصفاً عربياً للاستمارة، ثم ولّدها واملأها وأرسلها.</div>
+      <h1>Safi — توليد الاستمارات</h1>
+      <div className="sub">اكتب وصفاً عربياً للاستمارة، ثم ولّدها واملأها وأرسلها. (التوليد والحفظ يتطلّبان تسجيل الدخول.)</div>
 
       <div className="card">
         <textarea value={prompt} onChange={(e) => setPrompt(e.target.value)} />
