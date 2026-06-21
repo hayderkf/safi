@@ -5,14 +5,17 @@
 """
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException
+import datetime
+
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from pydantic import BaseModel, Field
-from sqlalchemy import delete, func, select
+from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..auth.deps import require_permission
 from ..db.models import LookupItem, LookupList, User
 from ..db.session import get_session
+from ..forms.lookup_excel import parse_lookup_excel
 from ..forms.lookup_gen import generate_lookup_items
 
 router = APIRouter(prefix="/lookups", tags=["lookups"])
@@ -52,6 +55,8 @@ def _item_dict(i: LookupItem) -> dict:
         "source": i.source,
         "confidence": i.confidence,
         "version": i.version,
+        "reviewed_by": i.reviewed_by,
+        "reviewed_at": i.reviewed_at.isoformat() if i.reviewed_at else None,
     }
 
 
@@ -86,18 +91,38 @@ async def generate_lookup(
     return await generate_lookup_items(req.description, req.hierarchical)
 
 
+@router.post("/import-excel")
+async def import_excel(
+    file: UploadFile = File(...),
+    _user: User = Depends(require_permission("lookups:write")),
+) -> dict:
+    """يقرأ ملف .xlsx ويقترح عناصر قائمة (لا يحفظ) — تُراجَع بشرياً ثم تُعتمد."""
+    data = await file.read()
+    if not data:
+        raise HTTPException(status_code=400, detail="الملف فارغ")
+    try:
+        return parse_lookup_excel(data, filename=file.filename or "")
+    except Exception as e:  # noqa: BLE001 — نُغلّف أي خطأ قراءة كرسالة واضحة
+        raise HTTPException(status_code=400, detail=f"تعذّر قراءة الملف: {e}")
+
+
 @router.get("")
 async def list_lists(session: AsyncSession = Depends(get_session)) -> list[dict]:
     counts = dict(
         (
             await session.execute(
-                select(LookupItem.list_key, func.count()).group_by(LookupItem.list_key)
+                select(LookupItem.list_key, func.count())
+                .where(LookupItem.is_active.is_(True))
+                .group_by(LookupItem.list_key)
             )
         ).all()
     )
-    res = await session.execute(select(LookupList).order_by(LookupList.key))
+    res = await session.execute(
+        select(LookupList).where(LookupList.is_active.is_(True)).order_by(LookupList.key)
+    )
     return [
-        {"key": l.key, "label": l.label, "description": l.description, "item_count": counts.get(l.key, 0)}
+        {"key": l.key, "kind": l.kind, "label": l.label, "description": l.description,
+         "item_count": counts.get(l.key, 0)}
         for l in res.scalars()
     ]
 
@@ -106,10 +131,14 @@ async def list_lists(session: AsyncSession = Depends(get_session)) -> list[dict]
 async def get_list(
     key: str, parent: str | None = None, session: AsyncSession = Depends(get_session)
 ) -> dict:
-    lst = (await session.execute(select(LookupList).where(LookupList.key == key))).scalar_one_or_none()
+    lst = (
+        await session.execute(
+            select(LookupList).where(LookupList.key == key, LookupList.is_active.is_(True))
+        )
+    ).scalar_one_or_none()
     if not lst:
         raise HTTPException(status_code=404, detail="القائمة الساندة غير موجودة")
-    stmt = select(LookupItem).where(LookupItem.list_key == key)
+    stmt = select(LookupItem).where(LookupItem.list_key == key, LookupItem.is_active.is_(True))
     if parent is not None:
         stmt = stmt.where(LookupItem.parent_value_key == parent)
     stmt = stmt.order_by(LookupItem.sort_order, LookupItem.value_key)
@@ -123,13 +152,16 @@ async def delete_list(
     session: AsyncSession = Depends(get_session),
     _user: User = Depends(require_permission("lookups:write")),
 ) -> dict:
+    """حذف ناعم: تعطيل القائمة وعناصرها (لا نُيتّم إجابات تخزّن value_key)."""
     lst = (await session.execute(select(LookupList).where(LookupList.key == key))).scalar_one_or_none()
     if not lst:
         raise HTTPException(status_code=404, detail="القائمة الساندة غير موجودة")
-    await session.execute(delete(LookupItem).where(LookupItem.list_key == key))
-    await session.delete(lst)
+    lst.is_active = False
+    await session.execute(
+        update(LookupItem).where(LookupItem.list_key == key).values(is_active=False)
+    )
     await session.commit()
-    return {"deleted": key}
+    return {"deactivated": key}
 
 
 @router.post("/{key}/items")
@@ -137,22 +169,44 @@ async def add_items(
     key: str,
     req: AddItemsRequest,
     session: AsyncSession = Depends(get_session),
-    _user: User = Depends(require_permission("lookups:write")),
+    user: User = Depends(require_permission("lookups:write")),
 ) -> dict:
+    """إضافة/تحديث عناصر (upsert على (list_key, value_key)) مع ختم المراجعة البشرية."""
     if not (await session.execute(select(LookupList).where(LookupList.key == key))).scalar_one_or_none():
         raise HTTPException(status_code=404, detail="القائمة الساندة غير موجودة")
+    now = datetime.datetime.now(datetime.timezone.utc)
+    added = updated = 0
     for it in req.items:
-        session.add(
-            LookupItem(
-                list_key=key,
-                value_key=it.value_key,
-                label=it.label,
-                parent_value_key=it.parent_value_key,
-                sort_order=it.sort_order,
-                source=it.source,
-                confidence=it.confidence,
-                version=it.version,
+        existing = (
+            await session.execute(
+                select(LookupItem).where(LookupItem.list_key == key, LookupItem.value_key == it.value_key)
             )
-        )
+        ).scalar_one_or_none()
+        if existing:  # تحديث + إعادة تفعيل (تفادي خرق قيد التفرّد)
+            existing.label = it.label or existing.label
+            existing.parent_value_key = it.parent_value_key
+            existing.sort_order = it.sort_order
+            existing.source = it.source or existing.source
+            existing.confidence = it.confidence
+            existing.is_active = True
+            existing.reviewed_by = user.username
+            existing.reviewed_at = now
+            updated += 1
+        else:
+            session.add(
+                LookupItem(
+                    list_key=key,
+                    value_key=it.value_key,
+                    label=it.label,
+                    parent_value_key=it.parent_value_key,
+                    sort_order=it.sort_order,
+                    source=it.source,
+                    confidence=it.confidence,
+                    version=it.version,
+                    reviewed_by=user.username,
+                    reviewed_at=now,
+                )
+            )
+            added += 1
     await session.commit()
-    return {"key": key, "added": len(req.items)}
+    return {"key": key, "added": added, "updated": updated}

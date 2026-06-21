@@ -8,8 +8,9 @@
   - `POST /forms/describe` — **عكس التوليد**: مخطط IR → وصف لغوي عربي طبيعي (يلتقط الأنواع/الإلزام/الخيارات/الإسناد للقوائم/التتالي/الشرط). يحمي بـ `forms:generate`. تحقّق حيّ ✅.
   - `POST /forms`, `GET /forms`, `GET /forms/{id}` — حفظ/استرجاع (Postgres، تخزين هجين JSONB).
   - `POST /forms/{id}/submissions`, `GET /forms/{id}/submissions` — الإجابات.
-  - **البيانات الساندة (المرحلة ٤):** `GET/POST /lookups`, `GET /lookups/{key}` (مع `?parent=` للتتالي), `POST /lookups/{key}/items`, `DELETE /lookups/{key}`. جداول `lookup_lists` + `lookup_items` **بأعمدة إسناد** (`source`/`confidence`/`version`). بذور حيّة: محافظات العراق (18) + أقضية مختارة (15) متتالية. التحقّق الحيّ ✅.
-  - `POST /lookups/generate` — **توليد القوائم بالذكاء**: وصف → عناصر مقترَحة بالبنية الصحيحة (`value_key`/`label`/`parent_value_key`) + إسناد `ai:<model>` وثقة 0.7؛ **لا تُحفَظ** بل تُراجَع بشرياً ثم تُعتمد (مبدأ كبح الهلوسة + إنسان في الحلقة). تحقّق حيّ ✅ (مسطّحة وهرمية).
+  - **البيانات الساندة (المرحلة ٤، مُمتَّنة — DR-4):** `GET/POST /lookups`, `GET /lookups/{key}` (مع `?parent=` للتتالي), `POST /lookups/{key}/items`, `DELETE /lookups/{key}`. جداول `lookup_lists`/`lookup_items` **بإسناد** (`source`/`confidence`/`version`) **+ حوكمة**: قيد تفرّد `(list_key,value_key)`، حذف ناعم `is_active` (لا يُيتّم الإجابات)، ختم مراجعة `reviewed_by`/`reviewed_at`، و`kind` بذرة لسجلّ الموارد المعرفية. `add_items` = **upsert**. بذور: محافظات (18) + أقضية (15). تحقّق حيّ ✅.
+  - `POST /lookups/generate` — **توليد بالذكاء**: وصف → عناصر مقترَحة (بنية صحيحة + `ai:<model>`/ثقة 0.7)؛ لا تُحفَظ بل تُراجَع وتُعتمد.
+  - `POST /lookups/import-excel` — **استيراد من Excel** (.xlsx): أعمدة مرنة (`value_key`/`label_ar`/`label_en`/`parent_value_key`)، حذف مكرّرات بتحذير، قائمة لكل ملف؛ يقترح فقط ثم يُراجَع ويُعتمد. تحقّق حيّ ✅.
   - **الهوية والصلاحيات (المرحلة ٥):** `POST /auth/login` (JWT)، `GET /auth/me`، `POST /auth/register` (يتطلّب `users:manage`). **RBAC**: جداول `users` + `roles`؛ أدوار مزروعة (admin/reviewer/data_entry/viewer)، ومسؤول أولي `admin/admin` (dev — غيّره). الرمز **HS256 بالمكتبة القياسية** + تجزئة **PBKDF2**. تبعية `require_permission` تحمي: **التوليد** (`forms:generate`)، **حفظ الاستمارات** (`forms:write`)، **الإرسال** (`submissions:write`)، **كتابة/حذف القوائم** (`lookups:write`). القراءات مفتوحة. تحقّق حيّ ✅ (بلا رمز=401، admin=200).
   - **إدارة المستخدمين (`users:manage`):** `GET /users`، `GET /roles`، `PATCH /users/{id}` (أدوار/تفعيل/اسم/كلمة مرور)، `DELETE /users/{id}`، `DELETE /lookups/{key}`. حُرّاس سلامة: لا حذف/تعطيل للنفس ولا إزالة آخر مسؤول نشط (تحقّق حيّ ✅ → 400).
   - الجداول تُنشأ تلقائياً عند الإقلاع (`init_db`) + بذور idempotent (`seed_lookups` + `seed_auth`). قاعدة البيانات: `safi`.
@@ -26,7 +27,7 @@
 - المنافذ: الباك إند **8601**، الواجهة **3601**.
 
 ## خريطة الملفات
-- `backend/app/ai/provider.py` تجريد المزوّد · `ai/prompts.py` العقد · `forms/ir.py` نماذج IR · `forms/generate.py` التوليد+الإصلاح · `forms/describe.py` عكس التوليد · `forms/lookup_gen.py` توليد القوائم · `db/models.py` الجداول (forms/submissions + lookup_lists/items + users/roles) · `db/seed.py` البذور · `auth/security.py` (تجزئة+JWT) · `auth/deps.py` (المستخدم الحالي + require_permission) · `api/{routes,store_routes,lookup_routes,auth_routes,user_routes}.py`.
+- `backend/app/ai/provider.py` تجريد المزوّد · `ai/prompts.py` العقد · `forms/ir.py` نماذج IR · `forms/generate.py` التوليد+الإصلاح · `forms/describe.py` عكس التوليد · `forms/lookup_gen.py` توليد القوائم · `forms/lookup_excel.py` استيراد Excel · `db/models.py` الجداول (forms/submissions + lookup_lists/items + users/roles) · `db/seed.py` البذور · `auth/security.py` (تجزئة+JWT) · `auth/deps.py` (المستخدم الحالي + require_permission) · `api/{routes,store_routes,lookup_routes,auth_routes,user_routes}.py`.
 - `apps/web/lib/{types,rules,api,builder,auth}.ts` · `components/{FormRenderer,SignaturePad,AuthBar}.tsx` · `app/page.tsx` (التوليد) · `app/builder/page.tsx` (الباني) · `app/admin/page.tsx` (الإدارة).
 - `ai/poc/` نتائج إثبات المفهوم (مرجع).
 
@@ -43,7 +44,7 @@
 - **pgvector / MinIO / Temporal**: مؤجّلة لمراحلها (٦، التغليف، ٧).
 - لا توجد هجرات Alembic بعد (نستخدم `create_all` للتطوير) — تُضاف قبل الإنتاج.
 - العلاقات منطقية بلا FK صارمة (استراتيجية النظام).
-- **البيانات الساندة:** تُملأ يدوياً أو بالذكاء (مع مراجعة) عبر لوحة الإدارة. البذور عيّنة (18 محافظة + 15 قضاء)؛ الاستيراد الكامل من GADM (`IMSDIR/gadm41_IRQ_*.json`) متبقٍّ. **التوليد بالذكاء يقترح فقط** (ثقة 0.7) — راجِع الإملاء والدقّة قبل الاعتماد (النموذج المحلي قد يخطئ في الأسماء).
+- **البيانات الساندة:** تُملأ يدوياً / بالذكاء / من Excel — كلّها عبر **مراجعة بشرية** قبل الاعتماد. الرؤية المعمارية في **DR-4** (سجلّ موارد معرفية مُسنَدة؛ القوائم نوعها الأول). متبقٍّ لاحقاً (عند الحاجة): استيراد GADM الكامل، بحث `tsvector`، حارس حذف آمن (أي استمارات تشير لقائمة)، وأنواع موارد أخرى (مستندات/RAG في المرحلة ٦). **التوليد بالذكاء يقترح فقط** (ثقة 0.7) — راجِع الإملاء قبل الاعتماد.
 - **المصادقة (مهم للإنتاج):** JWT بالمكتبة القياسية (HS256) وتجزئة PBKDF2 — كافٍ للتطوير؛ يُرقَّى لاحقاً إلى مكتبة JWT موثّقة + argon2/bcrypt. **غيّر `admin/admin` و`JWT_SECRET` عبر البيئة قبل أي نشر.** حالياً المُنفَّذ فقط `lookups:write`؛ حماية بقية المسارات تأتي مع ربط واجهة الدخول. الرمز عديم الحالة (يبطل عند إعادة التشغيل إن لم يُضبط `JWT_SECRET`).
 
 ## أرضية التكافؤ

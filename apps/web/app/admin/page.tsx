@@ -10,6 +10,7 @@ import {
   deleteUser,
   generateLookup,
   getLookups,
+  importLookupExcel,
   listRoles,
   listUsers,
   registerUser,
@@ -162,6 +163,8 @@ function LookupsSection() {
   const [proposed, setProposed] = useState<ProposedLookupItem[] | null>(null);
   const [tkey, setTkey] = useState("");
   const [tlabel, setTlabel] = useState("");
+  const [warnings, setWarnings] = useState<string[]>([]);
+  const [xlBusy, setXlBusy] = useState(false);
 
   const reload = useCallback(() => {
     getLookups().then(setLists).catch((e) => setMsg({ t: e.message, ok: false }));
@@ -203,6 +206,25 @@ function LookupsSection() {
     setProposed((s) => (s ? s.map((it, idx) => (idx === i ? { ...it, ...p } : it)) : s));
   const editProposedAr = (i: number, ar: string) =>
     editProposed(i, { label: { ...(proposed?.[i].label || {}), ar } });
+  async function onExcel(file: File | undefined) {
+    if (!file) return;
+    setXlBusy(true);
+    setMsg(null);
+    setWarnings([]);
+    try {
+      const r = await importLookupExcel(file);
+      if (!r.ok || !r.items.length) throw new Error(r.warnings?.[0] || "تعذّر قراءة الملف");
+      setProposed(r.items);
+      setTkey(r.list_key || "");
+      setTlabel(r.list_label?.ar || "");
+      setGenHier(r.items.some((i) => !!i.parent_value_key));
+      setWarnings(r.warnings || []);
+    } catch (e: any) {
+      setMsg({ t: e.message, ok: false });
+    } finally {
+      setXlBusy(false);
+    }
+  }
   function approveProposed() {
     if (!proposed?.length || !tkey.trim()) {
       setMsg({ t: "أدخل مفتاح القائمة وراجِع العناصر", ok: false });
@@ -211,7 +233,7 @@ function LookupsSection() {
     guard(
       createLookupList(tkey.trim(), { ar: tlabel || tkey.trim() })
         .then(() => addLookupItems(tkey.trim(), proposed))
-        .then(() => { setProposed(null); setGenDesc(""); setTkey(""); setTlabel(""); })
+        .then(() => { setProposed(null); setGenDesc(""); setTkey(""); setTlabel(""); setWarnings([]); })
     );
   }
 
@@ -243,15 +265,22 @@ function LookupsSection() {
         </div>
       </div>
 
-      {/* توليد بالذكاء → مراجعة بشرية → اعتماد */}
+      {/* توليد بالذكاء / استيراد Excel → مراجعة بشرية → اعتماد */}
       <div className="sect">
-        <div className="sect-title">توليد قائمة بالذكاء (يراجعها المسؤول قبل الحفظ)</div>
+        <div className="sect-title">توليد/استيراد قائمة (يراجعها المسؤول قبل الحفظ)</div>
         <textarea value={genDesc} onChange={(e) => setGenDesc(e.target.value)} style={{ minHeight: 52 }}
           placeholder="صِف القائمة — مثلاً: «محافظات العراق وأقضيتها» أو «أنواع المؤسسات التعليمية»" />
         <div className="row mini" style={{ marginTop: 6 }}>
           <label className="chk"><input type="checkbox" checked={genHier} onChange={(e) => setGenHier(e.target.checked)} /> هرمية/متتالية (أب ← ابن)</label>
           <button className="add-btn" onClick={doGenerate} disabled={genBusy || !genDesc.trim()}>{genBusy ? "…جارٍ" : "توليد مقترح"}</button>
+          <span className="muted sm">أو</span>
+          <label className="add-btn" style={{ cursor: "pointer" }}>
+            {xlBusy ? "…جارٍ" : "رفع من Excel"}
+            <input type="file" accept=".xlsx" style={{ display: "none" }}
+              onChange={(e) => { onExcel(e.target.files?.[0]); e.target.value = ""; }} />
+          </label>
         </div>
+        <div className="muted sm" style={{ marginTop: 4 }}>أعمدة Excel: value_key · label_ar · label_en · parent_value_key (قائمة لكل ملف).</div>
 
         {proposed && (
           <div style={{ marginTop: 10, borderTop: "1px solid var(--border)", paddingTop: 10 }}>
@@ -260,6 +289,11 @@ function LookupsSection() {
               <input style={{ flex: 1, minWidth: 120 }} value={tlabel} onChange={(e) => setTlabel(e.target.value)} placeholder="اسم القائمة (عربي)" />
               <span className="muted sm">{proposed.length} عنصر · راجِع/عدّل</span>
             </div>
+            {warnings.length > 0 && (
+              <div className="todo" style={{ marginTop: 6 }}>
+                {warnings.map((w, i) => <div key={i}>⚠️ {w}</div>)}
+              </div>
+            )}
             <div className="tbl-wrap" style={{ marginTop: 6 }}>
               <table className="tbl">
                 <thead><tr><th>value_key</th><th>العرض (عربي)</th>{genHier && <th>الأب</th>}<th className="tbl-x"></th></tr></thead>

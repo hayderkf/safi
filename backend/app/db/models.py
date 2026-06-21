@@ -7,7 +7,7 @@ from __future__ import annotations
 import datetime
 import uuid
 
-from sqlalchemy import Boolean, DateTime, Float, Integer, String, func
+from sqlalchemy import Boolean, DateTime, Float, Integer, String, UniqueConstraint, func
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -47,8 +47,10 @@ class LookupList(Base):
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     key: Mapped[str] = mapped_column(String, unique=True, index=True)   # المفتاح المرجعي (dataSourceKey)
+    kind: Mapped[str] = mapped_column(String, default="list")           # بذرة DR-4: نوع المورد المعرفي
     label: Mapped[dict] = mapped_column(JSONB, default=dict)            # ترجمات الاسم {ar,en}
     description: Mapped[str] = mapped_column(String, default="")
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)      # حذف ناعم (لا نُيتّم إجابات تاريخية)
     created_at: Mapped[datetime.datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
@@ -56,6 +58,8 @@ class LookupList(Base):
 
 class LookupItem(Base):
     __tablename__ = "lookup_items"
+    # تفرّد القيمة داخل القائمة (يمنع الازدواج الذي يُفسد الربط)
+    __table_args__ = (UniqueConstraint("list_key", "value_key", name="uq_lookup_item_list_value"),)
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     list_key: Mapped[str] = mapped_column(String, index=True)           # علاقة منطقية بـ lookup_lists.key
@@ -63,10 +67,14 @@ class LookupItem(Base):
     label: Mapped[dict] = mapped_column(JSONB, default=dict)            # ترجمات العرض {ar,en}
     parent_value_key: Mapped[str | None] = mapped_column(String, index=True, nullable=True)  # للتتالي الهرمي
     sort_order: Mapped[int] = mapped_column(Integer, default=0)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)      # حذف ناعم (الإجابات تخزّن value_key)
     # ---- الإسناد (نسيج الثقة) ----
-    source: Mapped[str] = mapped_column(String, default="")             # مصدر القيمة
-    confidence: Mapped[float] = mapped_column(Float, default=1.0)       # درجة الثقة
+    source: Mapped[str] = mapped_column(String, default="")             # مصدر القيمة (seed/admin/ai/excel)
+    confidence: Mapped[float] = mapped_column(Float, default=1.0)       # موثوقية المصدر
     version: Mapped[int] = mapped_column(Integer, default=1)            # إصدار البيان
+    # ---- الحوكمة (إنسان في الحلقة) ----
+    reviewed_by: Mapped[str | None] = mapped_column(String, nullable=True)   # من اعتمده بشرياً
+    reviewed_at: Mapped[datetime.datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime.datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )

@@ -145,3 +145,13 @@ export const generateLookup = (
   hierarchical: boolean
 ): Promise<{ ok: boolean; items: ProposedLookupItem[]; meta: any }> =>
   jpost("/lookups/generate", { description, hierarchical });
+
+export async function importLookupExcel(
+  file: File
+): Promise<{ ok: boolean; list_key: string; list_label: Translations; items: ProposedLookupItem[]; warnings: string[]; meta: any }> {
+  const fd = new FormData();
+  fd.append("file", file);
+  const r = await fetch(`${BASE}/lookups/import-excel`, { method: "POST", headers: { ...authHeaders() }, body: fd });
+  check(r, "/lookups/import-excel");
+  return r.json();
+}
